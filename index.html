@@ -4,7 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>die Ragebaiters | Professional Airsoft Team</title>
-  <meta name="description" content="Offizielle Teamseite von die Ragebaiters – Taktik, Teamplay und Spaß am Airsoft." />
+  
+  <link rel="icon" type="image/png" href="logo.png">
+  
+  <meta name="description" content="Offizielle Teamseite von die Ragebaiters – Taktik, Teamplay und sauberer Sportsgeist im Airsoft." />
   <style>
     :root {
       --bg: #0c0f12;
@@ -92,6 +95,16 @@
     a.tab-link.active {
       box-shadow: 0 0 15px rgba(183,255,60,0.3);
       border-color: #fff;
+    }
+
+    .youtube-link {
+      background: var(--accent) !important;
+      border-color: var(--accent) !important;
+      color: #000 !important;
+    }
+    .youtube-link:hover {
+      background: var(--accent-2) !important;
+      border-color: var(--accent-2) !important;
     }
 
     header { padding: 20px 0; }
@@ -200,7 +213,6 @@
     }
 
     .section { padding: 60px 0; }
-    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
     .card { padding: 40px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); display: flex; flex-direction: column; gap: 15px; }
     .split { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 40px; }
 
@@ -222,7 +234,7 @@
     }
 
     @media (max-width: 1000px) {
-      .hero-grid, .grid-3, .split { grid-template-columns: 1fr; }
+      .hero-grid, .split { grid-template-columns: 1fr; }
       .nav { flex-direction: column; gap: 20px; text-align: center; }
       .nav-links { justify-content: center; }
     }
@@ -245,6 +257,7 @@
         <a class="tab-link" data-tab="team">Team</a>
         <a class="tab-link" data-tab="impressum">Impressum</a>
         <a class="tab-link" data-tab="datenschutz">Datenschutz</a>
+        <a href="https://www.youtube.com/@RagebaitersAS" target="_blank" class="youtube-link">YouTube</a>
         <a href="https://www.instagram.com/die_ragebaiters/" target="_blank">Instagram</a>
       </div>
     </nav>
@@ -256,7 +269,7 @@
       <section class="hero">
         <div class="hero-grid">
           <div class="hero-logo-large">
-            <img src="logo.png" alt="die Ragebaiters Team Logo" />
+            <img src="logo2.png" alt="die Ragebaiters Team Logo" />
           </div>
           <div class="hero-content">
             <span class="eyebrow">Professional Tactical Unit</span>
@@ -264,7 +277,9 @@
             <p style="margin-bottom: 0;">Willkommen bei den <strong>Ragebaiters</strong>. Wir stehen für taktische Exzellenz, visuelle Konsistenz und kompromisslose Fairness im Airsoft.</p>
             
             <div style="padding: 16px 20px; background: rgba(183,255,60,0.05); border-left: 3px solid var(--accent); border-radius: 8px; font-size: 1.1rem; color: var(--text);">
-              Wir sind ein Airsoft-Team aus dem Kreis Mayen-Koblenz. Wir spielen hauptsächlich auf der Area M. Bei Interesse schreib uns gerne an, wir freuen uns!
+              Wir sind ein motiviertes Airsoft-Team mit Fokus auf Taktik, Teamwork und sauberes Gameplay.<br>
+              Professionell im Spiel – entspannt im Umgang. Bei uns findest du sowohl Struktur als auch Humor.<br><br>
+              Wir kommen aus dem Kreis Mayen-Koblenz und spielen hauptsächlich auf der Area M. Bei Interesse schreib uns gerne an!
             </div>
 
             <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 10px;">
@@ -329,7 +344,7 @@
             <div style="font-size: 1.4rem; font-weight: 800;">Disccave</div>
           </div>
           <div class="member-card">
-            <div class="role-badge">Feuerkraft-Support</div>
+            <div class="role-badge">Support</div>
             <div style="font-size: 1.4rem; font-weight: 800;">Nathan Goldstein</div>
           </div>
           <div class="member-card">
@@ -355,7 +370,7 @@
           Höhrer Straße 11<br>
           56179 Vallendar</p>
           <p><strong>Kontakt:</strong><br>
-          E-Mail: Ragebaiters@gmx.de</p>
+          E-Mail: <a href="mailto:Ragebaiters@gmx.de" style="background:transparent; border:none; color:var(--accent)!important; padding:0; text-transform:none;">Ragebaiters@gmx.de</a></p>
           <h3 style="color: var(--accent); margin-top: 20px;">Verantwortlich für den Inhalt</h3>
           <p>Michael Scholz<br>
           Höhrer Straße 11<br>
@@ -380,6 +395,8 @@
         <a class="tab-link" data-tab="home">Startseite</a>
         <a class="tab-link" data-tab="team">Team</a>
         <a class="tab-link" data-tab="impressum">Impressum</a>
+        <a href="https://www.youtube.com/@RagebaitersAS" target="_blank" class="youtube-link">YouTube</a>
+        <a href="https://www.instagram.com/die_ragebaiters/" target="_blank">Instagram</a>
       </div>
       <div style="text-align: right;">
         <div style="font-weight: 800; color: var(--text);">die Ragebaiters</div>
@@ -412,10 +429,6 @@
           switchTab(tab);
         }
       });
-    });
-  </script>
-</body>
-</html>
     });
   </script>
 </body>
