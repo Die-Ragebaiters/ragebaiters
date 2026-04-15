@@ -202,7 +202,6 @@
     .section { padding: 60px 0; }
     .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
     .card { padding: 40px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); display: flex; flex-direction: column; gap: 15px; }
-    .card h4 { color: var(--accent); margin: 0; font-size: 1.4rem; font-weight: 800; }
     .split { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 40px; }
 
     .list { display: grid; gap: 24px; margin-top: 20px; }
@@ -268,7 +267,7 @@
               Wir sind ein Airsoft-Team aus dem Kreis Mayen-Koblenz. Wir spielen hauptsächlich auf der Area M. Bei Interesse schreib uns gerne an, wir freuen uns!
             </div>
 
-            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+            <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 10px;">
               <a class="tab-link" data-tab="team" style="padding: 16px 32px;">Die Einheit ansehen</a>
             </div>
           </div>
@@ -298,23 +297,6 @@
             <h3 style="margin:0; color: var(--accent);">Unser Anspruch</h3>
             <p>Gute Spiele entstehen aus Vorbereitung und Verlässlichkeit. Wir wollen einen professionellen Eindruck hinterlassen, bei dem jeder sofort versteht, wofür wir stehen.</p>
           </article>
-        </div>
-      </section>
-
-      <section class="section">
-        <div class="grid-3">
-            <div class="card" style="border-top: 4px solid var(--accent);">
-                <h4>Auf dem Feld</h4>
-                <p>Objektiv spielen, Positionen halten, Lücken nutzen und Momentum erzeugen.</p>
-            </div>
-            <div class="card" style="border-top: 4px solid var(--accent-2);">
-                <h4>Außerhalb des Felds</h4>
-                <p>Community pflegen, Content liefern, Teamkultur stärken und sichtbar bleiben.</p>
-            </div>
-            <div class="card">
-                <h4>Loadout & Auftreten</h4>
-                <p>Einheitlicher Look, sinnvolle Ausrüstung und ein Setup, das im Spiel funktioniert.</p>
-            </div>
         </div>
       </section>
     </div>
@@ -364,7 +346,7 @@
 
     <div id="tab-impressum" class="tab-page">
       <section class="section">
-        <h2>Impressum</h2>
+        <h2 style="font-size: 3rem; margin-bottom: 30px;">Impressum</h2>
         <div class="card">
           <h3 style="color: var(--accent);">Angaben gemäß § 5 TMG</h3>
           <p><strong>Teamname:</strong> die Ragebaiters Airsoft Team</p>
@@ -430,6 +412,10 @@
           switchTab(tab);
         }
       });
+    });
+  </script>
+</body>
+</html>
     });
   </script>
 </body>
