@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>die Ragebaiters | Professional Airsoft Team</title>
+  <title>die Ragebaiters | Airsoft Team</title>
   
   <link rel="icon" type="image/png" href="images/logo.png">
   
@@ -188,6 +188,35 @@
       letter-spacing: 0.05em;
     }
 
+    .contact-box {
+      margin-top: 40px;
+      padding: 36px 40px;
+      background: rgba(183,255,60,0.06);
+      border: 1px solid rgba(183,255,60,0.25);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .contact-box h3 { margin: 0; color: var(--accent); }
+    .contact-box p { margin: 0; color: var(--muted); }
+    .contact-email {
+      display: inline-block;
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--accent) !important;
+      background: transparent !important;
+      border: 1px solid rgba(183,255,60,0.4) !important;
+      padding: 10px 20px !important;
+      border-radius: 10px;
+      width: fit-content;
+      text-transform: none !important;
+      letter-spacing: normal !important;
+    }
+    .contact-email:hover {
+      background: rgba(183,255,60,0.1) !important;
+    }
+
     .footer { padding: 60px 0; border-top: 1px solid var(--line); margin-top: 80px; color: var(--muted); text-align: center; }
     .tab-page { display: none; }
     .tab-page.active { display: block; }
@@ -232,14 +261,14 @@
           <div class="hero-logo-large"><img src="images/logo.png" alt="Logo" /></div>
           
           <div class="hero-content">
-            <span class="eyebrow">Professional Tactical Unit</span>
-            <h2 style="font-weight: 900;">Keine Kompromisse.<br>Nur Koordination.</h2>
-            <p>Willkommen bei den <strong>Ragebaiters</strong>. Wir stehen für taktische Exzellenz, visuelle Konsistenz und kompromisslose Fairness im Airsoft.</p>
+            <span class="eyebrow">Anfängerfreundliches Airsoft-Team</span>
+            <h2 style="font-weight: 900;">Kein Vorwissen nötig.<br>Nur Lust auf Teamplay.</h2>
+            <p>Willkommen bei den <strong>Ragebaiters</strong>. Wir stehen für Spaß, Zusammenhalt und gutes Teamplay – egal ob du gerade erst anfängst oder schon etwas Erfahrung mitbringst.</p>
             
             <div style="padding: 16px 20px; background: rgba(183,255,60,0.05); border-left: 3px solid var(--accent); border-radius: 8px; font-size: 1.1rem; color: var(--text);">
-              Wir sind ein motiviertes Airsoft-Team mit Fokus auf Taktik, Teamwork und sauberes Gameplay.<br>
-              Professionell im Spiel – entspannt im Umgang. Bei uns findest du sowohl Struktur als auch Humor.<br><br>
-              Wir kommen aus dem Kreis Mayen-Koblenz und spielen hauptsächlich auf der Area M. Bei Interesse schreib uns gerne an!
+              Wir sind ein entspanntes Airsoft-Team mit Fokus auf Teamwork, gegenseitige Unterstützung und fair gespieltes Gameplay.<br>
+              Neueinsteiger sind bei uns herzlich willkommen – wir helfen dir beim Start und zeigen dir alles, was du wissen musst.<br><br>
+              Wir kommen aus dem Kreis Mayen-Koblenz und spielen hauptsächlich auf der Area M. Bei Interesse schreib uns einfach an!
             </div>
 
             <a class="tab-link" data-tab="team" style="padding: 16px 32px;">Die Einheit ansehen</a>
@@ -254,21 +283,27 @@
             <div class="list">
               <div class="list-item">
                 <span class="dot"></span>
-                <div><strong>Kommunikation unter Druck</strong><br><span style="color: var(--muted);">Kurze, klare Infos. Gute Calls entscheiden oft mehr als rohe Geschwindigkeit.</span></div>
+                <div><strong>Anfänger willkommen</strong><br><span style="color: var(--muted);">Kein Vorwissen nötig. Wir nehmen uns Zeit, neue Gesichter einzuführen und alles zu erklären.</span></div>
               </div>
               <div class="list-item">
                 <span class="dot"></span>
-                <div><strong>Sauberes Teamplay</strong><br><span style="color: var(--muted);">Pushes, Winkel, Absicherung und Rollenverteilung greifen ineinander.</span></div>
+                <div><strong>Entspannte Atmosphäre</strong><br><span style="color: var(--muted);">Bei uns steht der Spaß im Vordergrund. Fehler passieren – wichtig ist, dass wir gemeinsam lernen.</span></div>
               </div>
               <div class="list-item">
                 <span class="dot"></span>
-                <div><strong>Präsenz mit Wiedererkennungswert</strong><br><span style="color: var(--muted);">Ein Team soll nicht nur spielen, sondern auch als Marke sichtbar auftreten.</span></div>
+                <div><strong>Fairer Umgang</strong><br><span style="color: var(--muted);">Respekt und Fairplay sind für uns selbstverständlich – sowohl im Team als auch gegenüber anderen.</span></div>
               </div>
             </div>
           </article>
           <article class="card">
             <h3 style="margin:0; color: var(--accent);">Unser Anspruch</h3>
-            <p>Gute Spiele entstehen aus Vorbereitung und Verlässlichkeit. Wir wollen einen professionellen Eindruck hinterlassen, bei dem jeder sofort versteht, wofür wir stehen.</p>
+            <p>Wir wollen eine Gruppe sein, in der sich jeder wohlfühlt – egal ob Neuling oder erfahrener Spieler. Wer Lust auf Airsoft hat, ist bei uns richtig. Kein Leistungsdruck, keine komischen Blicke. Einfach mitspielen.</p>
+
+            <div class="contact-box">
+              <h3>Interesse? Meld dich!</h3>
+              <p>Du möchtest mitspielen oder hast einfach Fragen? Schreib uns jederzeit – wir freuen uns über jeden, der Lust hat reinzuschnuppern.</p>
+              <a href="mailto:Ragebaiters@gmx.de" class="contact-email">✉ Ragebaiters@gmx.de</a>
+            </div>
           </article>
         </div>
       </section>
@@ -281,9 +316,9 @@
         
         <h3 style="color: var(--accent); margin-bottom: 20px;">Teamführung</h3>
         <div class="member-grid" style="grid-template-columns: 1fr;">
-          <div class="member-card lead" onclick="openMember('Yotzek (Ben)')">
+          <div class="member-card lead" onclick="openMember('Yotzek')">
             <div class="role-badge">Teamführer</div>
-            <div style="font-size: 2rem; font-weight: 900;">Yotzek (Ben)</div>
+            <div style="font-size: 2rem; font-weight: 900;">Yotzek</div>
           </div>
         </div>
 
@@ -313,9 +348,7 @@
             <div class="role-badge">Techniker</div>
             <div style="font-size: 1.4rem; font-weight: 800;">Wolfgang</div>
           </div>
-
-          
-          </div>
+        </div>
       </section>
     </div>
 
@@ -336,16 +369,11 @@
   </footer>
 
   <script>
-    /**************************************************************************
-     * ###################################################################### *
-     * ##          T E A M - I N F O S   B E A R B E I T E N              ## *
-     * ###################################################################### *
-     **************************************************************************/
     const memberData = {
-      "Yotzek (Ben)": {
+      "Yotzek": {
         img: "images/benf.png",
         role: "Teamführer",
-        desc: "Ben ist derjenige, der die Truppe zusammenhält. Er koordiniert große Einheiten effizient und zielgerichtet. Selbst im Gefecht bewahrt er einen kühlen Kopf, trifft klare Entscheidungen und steht seinen Leuten jederzeit unterstützend zur Seite"
+        desc: "Ben ist derjenige, der die Truppe zusammenhält. Er koordiniert große Einheiten effizient und zielgerichtet. Selbst im Gefecht bewahrt er einen kühlen Kopf, trifft klare Entscheidungen und steht seinen Leuten jederzeit unterstützend zur Seite."
       },
       "sneiper0 (Jason)": { 
         img: "images/jason.png", 
@@ -360,7 +388,7 @@
       "Disccave (Nils)": {
         img: "images/nils.png",
         role: "Breacher / OG",
-        desc: "Nils hat die Gruppe zum Airsoft geführt und gehört damit zu den „OGs“. Besonders gut ist er in der Improvisation sowie in der Koordination kleiner Gruppen."
+        desc: "Nils hat die Gruppe zum Airsoft geführt und gehört damit zu den OGs. Besonders gut ist er in der Improvisation sowie in der Koordination kleiner Gruppen."
       },
       "Nathan Goldstein (Nathan)": { 
         img: "images/nathan.png", 
@@ -377,17 +405,11 @@
         role: "Techniker", 
         desc: "Der Mann für das Grobe und Feine. Hält die Markierer am Laufen." 
       },
-
-      /* #######################################################################
-         ##  Y O N T E   -   D A T E N   (Bei Bedarf Kommentar /* entfernen)
-         #######################################################################
-      */
       "Yonte": { 
         img: "images/yonte.png", 
         role: "Techniker", 
         desc: "Zusätzliche technische Unterstützung für das Team." 
       }
-      // #######################################################################
     };
 
     function openMember(name) {
