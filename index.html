@@ -72,6 +72,8 @@
       cursor: pointer;
       white-space: nowrap;
     }
+    
+    a:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(183,255,60,0.3); }
 
     header { padding: 10px 0; }
     
@@ -102,8 +104,20 @@
     .hero { padding: 40px 0; }
     .hero-grid { display: grid; grid-template-columns: 1fr; gap: 30px; align-items: center; }
 
+    /* --- PERMANENTES SCHWEBEN --- */
+    @keyframes floatAnimation {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-15px); }
+      100% { transform: translateY(0px); }
+    }
+
     .hero-logo-large { display: flex; justify-content: center; }
-    .hero-logo-large img { width: 100%; max-width: 300px; }
+    .hero-logo-large img { 
+      width: 100%; 
+      max-width: 300px; 
+      filter: drop-shadow(0 15px 25px rgba(0,0,0,0.6));
+      animation: floatAnimation 4s ease-in-out infinite; /* Hier passiert die Magie */
+    }
 
     .hero-content { display: flex; flex-direction: column; gap: 20px; text-align: center; }
 
@@ -144,7 +158,12 @@
     .member-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; margin-top: 20px; }
     .member-card {
       padding: 25px 15px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
-      text-align: center; transition: 0.3s ease; cursor: pointer;
+      text-align: center; transition: 0.4s cubic-bezier(0.165, 0.84, 0.44, 1); cursor: pointer;
+    }
+    .member-card:hover {
+      background: var(--panel-strong);
+      transform: translateY(-5px);
+      border-color: var(--accent);
     }
 
     .role-badge {
