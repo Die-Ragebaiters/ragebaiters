@@ -49,6 +49,19 @@
       <div class="card upload-card">
         <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden>
 
+        <div class="upload-meta">
+          <label class="field" for="captionInput">
+            <span>Bildtext</span>
+            <textarea
+              id="captionInput"
+              class="upload-caption-input"
+              maxlength="500"
+              placeholder="Optionaler Text zum Bild. Wenn du mehrere Bilder gleichzeitig auswählst, wird dieser Text für alle ausgewählten Bilder übernommen."
+            ></textarea>
+          </label>
+          <div class="upload-meta-hint">Maximal 500 Zeichen. Der Dateiname bleibt weiterhin der Bildtitel.</div>
+        </div>
+
         <div class="upload-dropzone" id="dropzone">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                stroke-linecap="round" stroke-linejoin="round" class="upload-icon">
@@ -98,6 +111,7 @@
 
     const dropzone = document.getElementById('dropzone');
     const fileInput = document.getElementById('fileInput');
+    const captionInput = document.getElementById('captionInput');
     const listEl   = document.getElementById('uploadList');
     const myPhotos = document.getElementById('myPhotos');
     const countEl  = document.getElementById('count');
@@ -117,9 +131,12 @@
       fileInput.value = '';
     });
 
-    function handle(files) { [...files].forEach(uploadOne); }
+    function handle(files) {
+      const caption = captionInput.value.trim().slice(0, 500);
+      [...files].forEach(file => uploadOne(file, caption));
+    }
 
-    async function uploadOne(file) {
+    async function uploadOne(file, caption) {
       const row = document.createElement('div');
       row.className = 'upload-row';
       row.innerHTML = `
@@ -152,6 +169,7 @@
         user_id: user.id,
         storage_path: key,
         title: stripExt(file.name).slice(0, 160),
+        caption: caption || null,
         mime: file.type,
         size_bytes: file.size,
         width: dims.width,
@@ -162,6 +180,9 @@
       bar.style.width = '100%';
       status.textContent = '✓ fertig';
       row.classList.add('is-done');
+      if (captionInput.value.trim() === caption) {
+        captionInput.value = '';
+      }
       setTimeout(loadMyPhotos, 400);
     }
 
@@ -182,7 +203,7 @@
     async function loadMyPhotos() {
       const { data, error } = await supabase
         .from('photos')
-        .select('id, storage_path, title, uploaded_at')
+        .select('id, storage_path, title, caption, uploaded_at')
         .eq('user_id', user.id)
         .order('uploaded_at', { ascending: false });
       if (error) {
@@ -205,7 +226,10 @@
             <img src="${pub.publicUrl}" alt="${escapeHtml(p.title || '')}" loading="lazy">
           </a>
           <figcaption>
-            <span>${escapeHtml(p.title || '')}</span>
+            <div class="photo-copy">
+              <span>${escapeHtml(p.title || '')}</span>
+              ${p.caption ? `<small>${escapeHtml(p.caption)}</small>` : ''}
+            </div>
             <button class="btn-delete" type="button" data-id="${p.id}" data-path="${encodeURIComponent(p.storage_path)}" title="Löschen">✕</button>
           </figcaption>`;
         grid.appendChild(fig);

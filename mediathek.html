@@ -72,7 +72,7 @@
 
     const { data, error } = await supabase
       .from('photos_public')
-      .select('id, storage_path, title, author, uploaded_at');
+      .select('id, storage_path, title, caption, author, uploaded_at');
 
     if (error) {
       gallery.innerHTML = '<div class="alert alert-error">' + escapeHtml(error.message) + '</div>';
@@ -87,11 +87,15 @@
         fig.className = 'photo-item';
         fig.dataset.full = pub.publicUrl;
         fig.dataset.title = p.title || '';
+        fig.dataset.caption = p.caption || '';
         fig.dataset.author = p.author || '';
         fig.innerHTML = `
           <img src="${pub.publicUrl}" alt="${escapeHtml(p.title || '')}" loading="lazy">
           <figcaption>
-            <span>${escapeHtml(p.title || '')}</span>
+            <div class="photo-copy">
+              <span>${escapeHtml(p.title || '')}</span>
+              ${p.caption ? `<small>${escapeHtml(p.caption)}</small>` : ''}
+            </div>
             <small>von ${escapeHtml(p.author || 'anonym')}</small>
           </figcaption>`;
         grid.appendChild(fig);
@@ -114,8 +118,10 @@
         idx = i;
         const it = items[i];
         img.src = it.dataset.full;
-        cap.innerHTML = `<strong>${escapeHtml(it.dataset.title)}</strong>` +
-          (it.dataset.author ? ` <span>von ${escapeHtml(it.dataset.author)}</span>` : '');
+        cap.innerHTML = `
+          <strong>${escapeHtml(it.dataset.title)}</strong>
+          ${it.dataset.caption ? `<p>${escapeHtml(it.dataset.caption)}</p>` : ''}
+          ${it.dataset.author ? `<span>von ${escapeHtml(it.dataset.author)}</span>` : ''}`;
         lb.classList.add('is-open');
         lb.setAttribute('aria-hidden', 'false');
       }

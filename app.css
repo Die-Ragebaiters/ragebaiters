@@ -121,6 +121,39 @@
 /* ----- Upload / Dropzone ----- */
 .upload-card { padding: 24px; }
 
+.upload-meta {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.upload-caption-input {
+  width: 100%;
+  min-height: 110px;
+  padding: 12px 14px;
+  resize: vertical;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  font-size: 0.98rem;
+  font-family: inherit;
+  line-height: 1.5;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+}
+
+.upload-caption-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: rgba(183,255,60,0.06);
+  box-shadow: 0 0 0 3px rgba(183,255,60,0.15), 0 0 22px rgba(183,255,60,0.2);
+}
+
+.upload-meta-hint {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
 .upload-dropzone {
   border: 2px dashed rgba(183,255,60,0.35);
   background: rgba(183,255,60,0.03);
@@ -228,13 +261,34 @@
   font-size: 0.85rem;
   color: var(--text);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
   border-top: 1px solid var(--line);
   background: rgba(0,0,0,0.25);
 }
 .photo-item figcaption small { color: var(--muted); }
+
+.photo-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.photo-copy span,
+.photo-copy small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.photo-copy span {
+  font-weight: 700;
+}
+
+.photo-copy small {
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
 
 .btn-delete {
   background: transparent;
@@ -284,12 +338,22 @@
   transform: translateX(-50%);
   color: var(--text);
   background: rgba(0,0,0,0.55);
-  padding: 8px 16px;
-  border-radius: 999px;
+  padding: 12px 16px;
+  border-radius: 18px;
   font-size: 0.9rem;
   border: 1px solid var(--line);
+  width: min(92vw, 680px);
+  text-align: center;
 }
 .lightbox-caption span { color: var(--muted); margin-left: 6px; }
+.lightbox-caption strong {
+  display: block;
+}
+.lightbox-caption p {
+  margin: 8px 0 0;
+  color: var(--text);
+  line-height: 1.5;
+}
 
 .lightbox-close,
 .lightbox-nav {
