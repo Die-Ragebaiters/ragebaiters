@@ -121,7 +121,12 @@
         .from('profiles').select('id').eq('username', user).maybeSingle();
       if (existing) return fail('Benutzername bereits vergeben.');
 
-      // 2) Account anlegen
+      // 2) Einladungscode vorab prÃ¼fen, damit kein Auth-Account ohne Invite entsteht
+      const { data: inviteOk, error: inviteErr } = await supabase.rpc('check_invite_code', { p_code: invite });
+      if (inviteErr) return fail('Einladungscode konnte nicht geprÃ¼ft werden: ' + inviteErr.message);
+      if (!inviteOk) return fail('Einladungscode ungÃ¼ltig oder bereits verwendet.');
+
+      // 3) Account anlegen
       const { data: signUp, error: signErr } = await supabase.auth.signUp({
         email: mail, password: pw,
         options: { data: { username: user } }
@@ -150,13 +155,13 @@
       if (redErr || !ok) {
         // Account existiert jetzt, aber Invite ist falsch -> Account wieder raus
         await supabase.auth.signOut();
-        return fail('Einladungscode ungültig oder bereits verwendet. Account wurde nicht aktiviert.');
+        return fail('Einladungscode wurde gerade bereits verwendet. Bitte frage den Teamführer nach einem neuen Code.');
       }
 
       // 4) Profil anlegen
-      const { error: profErr } = await supabase.from('profiles').insert({
+      const { error: profErr } = await supabase.from('profiles').upsert({
         id: uid, username: user, role: 'member'
-      });
+      }, { onConflict: 'id' });
       if (profErr) return fail('Profil konnte nicht angelegt werden: ' + profErr.message);
 
       location.href = 'dashboard.html';

@@ -101,7 +101,10 @@
     const user = await getSessionUser();
     if (!user) { location.href = 'login.html'; }
 
-    const profile = await getProfile(user.id);
+    let profile = await getProfile(user.id);
+    if (!profile) {
+      profile = await ensureProfile(user);
+    }
     document.getElementById('hello').textContent = profile?.username || user.email;
     document.getElementById('loading').hidden = true;
     document.getElementById('mainSection').hidden = false;
@@ -198,6 +201,20 @@
         img.onerror = rej;
         img.src = URL.createObjectURL(file);
       });
+    }
+
+    async function ensureProfile(user) {
+      const base = (user.user_metadata?.username || user.email?.split('@')[0] || 'member')
+        .replace(/[^A-Za-z0-9_.-]/g, '')
+        .slice(0, 24) || 'member';
+      const candidate = `${base}-${user.id.slice(0, 6)}`.slice(0, 32);
+      const payload = { id: user.id, username: candidate, role: 'member' };
+      const { error } = await supabase.from('profiles').upsert(payload, { onConflict: 'id' });
+      if (error) {
+        console.error('[Ragebaiters] Profil-Reparatur fehlgeschlagen:', error);
+        return null;
+      }
+      return payload;
     }
 
     async function loadMyPhotos() {
