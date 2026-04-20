@@ -9,59 +9,53 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <style>
-    /* Upload-Sektion Design */
-    .upload-section {
-      margin-top: 40px;
-      margin-bottom: 60px;
-      animation: modalFade 0.6s ease-out;
+    /* Styling für das moderne Formular */
+    .upload-card {
+      background: var(--bg-soft);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 30px;
+      margin-bottom: 50px;
+      box-shadow: var(--shadow);
     }
 
-    /* Moderne Drop-Zone */
     .file-drop-area {
       position: relative;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      padding: 50px 20px;
+      padding: 40px;
       border: 2px dashed var(--line);
-      border-radius: var(--radius);
+      border-radius: 15px;
       background: var(--panel);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: all 0.3s ease;
       cursor: pointer;
-      text-align: center;
+      margin-bottom: 20px;
     }
 
     .file-drop-area:hover {
       border-color: var(--accent);
-      background: rgba(183, 255, 60, 0.03);
-      transform: translateY(-2px);
+      background: rgba(183, 255, 60, 0.05);
     }
 
     .file-drop-area svg {
-      width: 50px;
-      height: 50px;
-      color: var(--accent);
-      margin-bottom: 15px;
-      filter: drop-shadow(0 0 8px rgba(183, 255, 60, 0.3));
+      width: 40px; height: 40px; color: var(--accent); margin-bottom: 10px;
     }
 
-    .file-input {
-      position: absolute;
-      left: 0; top: 0; width: 100%; height: 100%;
-      opacity: 0; cursor: pointer;
+    /* Input Felder Styling */
+    .input-group { margin-bottom: 15px; }
+    .input-group label {
+      display: block;
+      color: var(--muted);
+      font-size: 0.8rem;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      font-weight: 700;
     }
 
-    /* Formular */
-    .upload-form {
-      display: grid;
-      gap: 15px;
-      margin-top: 20px;
-    }
-
-    .upload-form input, .upload-form textarea {
+    .input-style {
       width: 100%;
-      padding: 16px;
+      padding: 14px;
       background: var(--panel-strong);
       border: 1px solid var(--line);
       border-radius: 12px;
@@ -71,47 +65,35 @@
       transition: border-color 0.3s;
     }
 
-    .upload-form input:focus { border-color: var(--accent); }
+    .input-style:focus { border-color: var(--accent); }
 
-    /* DER ULTIMATIVE UPLOAD BUTTON MIT GLOW */
+    /* Der Upload Button */
     #uploadBtn {
       width: 100%;
-      padding: 18px;
+      padding: 16px;
       background: var(--accent);
       color: #000;
       font-weight: 900;
       text-transform: uppercase;
-      letter-spacing: 1px;
       border: none;
       border-radius: 12px;
       cursor: pointer;
       transition: all 0.3s ease;
       box-shadow: 0 4px 15px rgba(183, 255, 60, 0.2);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
     }
 
     #uploadBtn:hover:not(:disabled) {
-      transform: translateY(-3px);
-      background: #caff6e;
-      box-shadow: 0 0 30px rgba(183, 255, 60, 0.6);
-      letter-spacing: 2px;
+      transform: translateY(-2px);
+      box-shadow: 0 0 25px rgba(183, 255, 60, 0.5);
     }
 
-    #uploadBtn:disabled {
-      background: var(--muted);
-      cursor: not-allowed;
-      opacity: 0.6;
-    }
+    #uploadBtn:disabled { background: var(--muted); opacity: 0.6; cursor: not-allowed; }
 
-    /* Galerie */
+    /* Galerie Grid */
     .media-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
       gap: 25px;
-      margin-top: 30px;
     }
 
     .media-card {
@@ -119,31 +101,18 @@
       border-radius: var(--radius);
       border: 1px solid var(--line);
       overflow: hidden;
-      transition: all 0.3s ease;
     }
 
-    .media-card:hover {
-      border-color: var(--accent);
-      transform: translateY(-5px);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    }
-
-    .media-card img {
-      width: 100%;
-      height: 250px;
-      object-fit: cover;
-      display: block;
-    }
-
-    .media-content { padding: 20px; }
-    .media-content h3 { margin: 0 0 8px 0; color: var(--accent); font-size: 1.3rem; }
-    .media-content p { margin: 0; color: var(--muted); font-size: 0.95rem; line-height: 1.5; }
+    .media-card img { width: 100%; height: 250px; object-fit: cover; }
+    .media-info { padding: 20px; }
+    .media-info h3 { margin: 0; color: var(--accent); }
+    .media-info p { color: var(--muted); margin-top: 5px; font-size: 0.9rem; }
   </style>
 </head>
 <body>
 
   <div class="top-banner">
-    <img src="images/banner2.png" alt="die Ragebaiters Banner" />
+    <img src="images/banner2.png" alt="Banner" />
   </div>
 
   <header class="container">
@@ -159,36 +128,35 @@
   </header>
 
   <main class="container">
-    
-    <section class="upload-section">
-      <div class="card">
-        <h2 style="margin-top: 0; color: var(--accent); text-transform: uppercase;">Neuen Content teilen</h2>
-        
-        <div class="file-drop-area" id="dropArea">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5 5-5 5 5m-5-5v12"></path>
-          </svg>
-          <span id="fileName" style="font-weight: 700; font-size: 1.1rem;">BILD AUSWÄHLEN</span>
-          <span style="color: var(--muted); font-size: 0.85rem; margin-top: 5px;">Klicken oder hierher ziehen</span>
-          <input type="file" class="file-input" id="fileInput" accept="image/*">
-        </div>
-
-        <div class="upload-form">
-          <input type="text" id="titleInput" placeholder="Titel (z.B. Action am Spieltag)">
-          <textarea id="descInput" rows="2" placeholder="Beschreibung..."></textarea>
-          <button id="uploadBtn">Upload starten</button>
-        </div>
+    <section class="upload-card">
+      <h2 style="margin-top: 0; color: var(--accent);">NEUER BEITRAG</h2>
+      
+      <div class="file-drop-area" id="dropArea">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5 5-5 5 5m-5-5v12"></path>
+        </svg>
+        <span id="fileName">Bild auswählen oder reinziehen</span>
+        <input type="file" id="fileInput" accept="image/*" style="position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer;">
       </div>
+
+      <div class="input-group">
+        <label>Titel</label>
+        <input type="text" id="titleInput" class="input-style" placeholder="z.B. Action im CQB">
+      </div>
+      
+      <div class="input-group">
+        <label>Beschreibung</label>
+        <textarea id="descInput" class="input-style" rows="3" placeholder="Was ist auf dem Bild zu sehen?"></textarea>
+      </div>
+
+      <button id="uploadBtn">Beitrag veröffentlichen</button>
     </section>
 
-    <h2 style="text-transform: uppercase; letter-spacing: 1px;">Galerie</h2>
-    <div id="gallery" class="media-grid">
-      </div>
-
+    <h2>Galerie</h2>
+    <div id="gallery" class="media-grid"></div>
   </main>
 
   <script>
-    // --- SUPABASE KONFIGURATION ---
     const SUPABASE_URL = 'https://twrzklmtwouwqkrpnrpw.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_HovuOnObKX3VOOt8EpN2jw_SGBJ9-7e';
     const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -196,36 +164,27 @@
     const fileInput = document.getElementById('fileInput');
     const fileNameDisplay = document.getElementById('fileName');
     const uploadBtn = document.getElementById('uploadBtn');
-    const gallery = document.getElementById('gallery');
 
-    // UI Feedback bei Auswahl
+    // Dateinamen anzeigen
     fileInput.addEventListener('change', () => {
       if (fileInput.files.length > 0) {
-        fileNameDisplay.innerText = "BEREIT: " + fileInput.files[0].name;
+        fileNameDisplay.innerText = "Ausgewählt: " + fileInput.files[0].name;
         fileNameDisplay.style.color = "var(--accent)";
       }
     });
 
     // Galerie laden
     async function loadGallery() {
-      const { data, error } = await supabase
-        .from('posts')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error("Ladefehler:", error);
-        return;
-      }
-
-      gallery.innerHTML = data.map(item => `
-        <article class="media-card">
-          <img src="${item.image_url}" alt="Ragebaiters" loading="lazy">
-          <div class="media-content">
+      const { data, error } = await supabase.from('posts').select('*').order('created_at', { ascending: false });
+      if (error) return;
+      document.getElementById('gallery').innerHTML = data.map(item => `
+        <div class="media-card">
+          <img src="${item.image_url}" alt="Ragebaiters">
+          <div class="media-info">
             <h3>${item.title}</h3>
             <p>${item.description || ''}</p>
           </div>
-        </article>
+        </div>
       `).join('');
     }
 
@@ -235,35 +194,33 @@
       const title = document.getElementById('titleInput').value;
       const desc = document.getElementById('descInput').value;
 
-      if (!file || !title) return alert("Bitte Bild und Titel angeben!");
+      if (!file || !title) return alert("Bitte Bild und Titel eingeben!");
 
       uploadBtn.disabled = true;
-      uploadBtn.innerText = "Wird hochgeladen...";
+      uploadBtn.innerText = "Lädt hoch...";
 
-      try {
-        const fName = `${Date.now()}_${file.name}`;
-        
-        // 1. Upload in Bucket 'images'
-        const { error: sErr } = await supabase.storage.from('images').upload(fName, file);
-        if (sErr) throw sErr;
+      const fName = `${Date.now()}_${file.name}`;
+      const { error: sErr } = await supabase.storage.from('images').upload(fName, file);
 
-        // 2. URL holen
-        const { data: urlData } = supabase.storage.from('images').getPublicUrl(fName);
-
-        // 3. Datenbank-Eintrag
-        const { error: dbError } = await supabase.from('posts').insert([{ 
-          title: title, 
-          description: desc, 
-          image_url: urlData.publicUrl 
-        }]);
-        if (dbError) throw dbError;
-
-        location.reload();
-
-      } catch (err) {
-        alert("Fehler: " + err.message);
+      if (sErr) {
+        alert("Fehler beim Hochladen des Bildes!");
         uploadBtn.disabled = false;
-        uploadBtn.innerText = "Upload starten";
+        return;
+      }
+
+      const { data: urlData } = supabase.storage.from('images').getPublicUrl(fName);
+      
+      const { error: dbError } = await supabase.from('posts').insert([{ 
+        title, 
+        description: desc, 
+        image_url: urlData.publicUrl 
+      }]);
+
+      if (dbError) {
+        alert("Fehler beim Speichern der Texte!");
+        uploadBtn.disabled = false;
+      } else {
+        location.reload();
       }
     });
 
