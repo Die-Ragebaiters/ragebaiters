@@ -20,6 +20,7 @@
       <div class="nav-links">
         <a href="index.html">Startseite</a>
         <a href="team.html">Team</a>
+        <a href="mediathek.html">Mediathek</a>
         <a class="active" href="impressum.html">Impressum</a>
         <a class="social-icon" href="https://www.youtube.com/@RagebaitersAS" target="_blank" rel="noopener" aria-label="YouTube" title="YouTube">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -141,5 +142,10 @@
     <div style="font-size: 0.8rem; opacity: 0.6;">Est. 2026 • Made by sneiper0</div>
   </footer>
 
+<script src="config.js"></script>
+<script type="module">
+  import { initPage } from './auth.js';
+  initPage('impressum');
+</script>
 </body>
 </html>

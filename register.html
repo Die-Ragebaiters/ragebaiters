@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registrieren | die Ragebaiters</title>
+  <link rel="icon" type="image/png" href="images/logo.png">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+  <div class="top-banner">
+    <img src="images/banner2.png" alt="die Ragebaiters Banner" />
+  </div>
+
+  <header class="container">
+    <nav class="nav">
+      <div style="font-weight: 900; font-size: 1.6rem;">die Ragebaiters</div>
+      <div class="nav-links">
+        <a href="index.html">Startseite</a>
+        <a href="team.html">Team</a>
+        <a href="mediathek.html">Mediathek</a>
+        <a href="impressum.html">Impressum</a>
+        <a class="social-icon" href="https://www.youtube.com/@RagebaitersAS" target="_blank" rel="noopener" aria-label="YouTube" title="YouTube">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M23.498 6.186a2.999 2.999 0 0 0-2.112-2.122C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.386.564A2.999 2.999 0 0 0 .502 6.186C0 8.074 0 12 0 12s0 3.926.502 5.814a2.999 2.999 0 0 0 2.112 2.122C4.495 20.5 12 20.5 12 20.5s7.505 0 9.386-.564a2.999 2.999 0 0 0 2.112-2.122C24 15.926 24 12 24 12s0-3.926-.502-5.814zM9.75 15.568V8.432L15.818 12 9.75 15.568z"/>
+          </svg>
+        </a>
+        <a class="social-icon" href="https://www.instagram.com/die_ragebaiters/" target="_blank" rel="noopener" aria-label="Instagram" title="Instagram">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+          </svg>
+        </a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section class="section">
+      <div class="auth-wrap">
+        <div class="auth-card card">
+          <span class="eyebrow">Neuer Account</span>
+          <h2 style="margin: 10px 0 4px;">Registrieren</h2>
+          <p style="color: var(--muted); margin: 0 0 24px;">
+            Du brauchst einen Einladungscode vom Teamführer.
+          </p>
+
+          <div id="alert" class="alert alert-error" hidden></div>
+          <div id="success" class="alert" style="background: rgba(183,255,60,0.08); border-color: rgba(183,255,60,0.35); color: var(--accent);" hidden></div>
+
+          <form id="regForm" class="auth-form" autocomplete="on">
+            <label class="field">
+              <span>Einladungscode</span>
+              <input type="text" name="invite" required autofocus>
+            </label>
+            <label class="field">
+              <span>Benutzername</span>
+              <input type="text" name="username" required minlength="3" maxlength="32" pattern="[A-Za-z0-9_\-\.]+">
+            </label>
+            <label class="field">
+              <span>E-Mail</span>
+              <input type="email" name="email" required>
+            </label>
+            <label class="field">
+              <span>Passwort (min. 8 Zeichen)</span>
+              <input type="password" name="password" required minlength="8">
+            </label>
+            <label class="field">
+              <span>Passwort wiederholen</span>
+              <input type="password" name="password2" required minlength="8">
+            </label>
+            <button type="submit" class="btn-primary" id="submitBtn">Registrieren</button>
+          </form>
+
+          <p class="auth-hint">
+            Schon einen Account? <a class="inline-link" href="login.html">Zum Login</a>
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer container">
+    <div style="font-weight: 800;">die Ragebaiters</div>
+    <div style="font-size: 0.8rem; opacity: 0.6;">Est. 2026 • Made by sneiper0</div>
+  </footer>
+
+  <script src="config.js"></script>
+  <script type="module">
+    import { supabase, initPage, getSessionUser } from './auth.js';
+    await initPage('login');
+
+    if (await getSessionUser()) location.href = 'dashboard.html';
+
+    const form    = document.getElementById('regForm');
+    const alertE  = document.getElementById('alert');
+    const okE     = document.getElementById('success');
+    const btn     = document.getElementById('submitBtn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      alertE.hidden = true;
+      okE.hidden = true;
+      btn.disabled = true;
+      btn.textContent = 'Wird angelegt …';
+
+      const fd = new FormData(form);
+      const invite  = fd.get('invite').trim();
+      const user    = fd.get('username').trim();
+      const mail    = fd.get('email').trim();
+      const pw      = fd.get('password');
+      const pw2     = fd.get('password2');
+
+      if (pw !== pw2) return fail('Passwörter stimmen nicht überein.');
+
+      // 1) Username bereits vergeben?
+      const { data: existing } = await supabase
+        .from('profiles').select('id').eq('username', user).maybeSingle();
+      if (existing) return fail('Benutzername bereits vergeben.');
+
+      // 2) Account anlegen
+      const { data: signUp, error: signErr } = await supabase.auth.signUp({
+        email: mail, password: pw,
+        options: { data: { username: user } }
+      });
+      if (signErr) return fail(mapError(signErr.message));
+
+      const uid = signUp.user?.id;
+
+      // Falls Email-Confirmation AN ist, haben wir noch keine Session -> direkt einloggen
+      let session = signUp.session;
+      if (!session) {
+        const { data: login } = await supabase.auth.signInWithPassword({ email: mail, password: pw });
+        session = login?.session;
+      }
+
+      if (!session) {
+        okE.textContent = 'Konto angelegt. Bitte bestätige die Mail in deinem Postfach, dann kannst du dich einloggen.';
+        okE.hidden = false;
+        btn.disabled = false;
+        btn.textContent = 'Registrieren';
+        return;
+      }
+
+      // 3) Einladungscode einlösen
+      const { data: ok, error: redErr } = await supabase.rpc('redeem_invite', { p_code: invite });
+      if (redErr || !ok) {
+        // Account existiert jetzt, aber Invite ist falsch -> Account wieder raus
+        await supabase.auth.signOut();
+        return fail('Einladungscode ungültig oder bereits verwendet. Account wurde nicht aktiviert.');
+      }
+
+      // 4) Profil anlegen
+      const { error: profErr } = await supabase.from('profiles').insert({
+        id: uid, username: user, role: 'member'
+      });
+      if (profErr) return fail('Profil konnte nicht angelegt werden: ' + profErr.message);
+
+      location.href = 'dashboard.html';
+    });
+
+    function fail(msg) {
+      alertE.textContent = msg;
+      alertE.hidden = false;
+      btn.disabled = false;
+      btn.textContent = 'Registrieren';
+    }
+    function mapError(msg) {
+      if (/already registered/i.test(msg)) return 'Diese E-Mail ist bereits registriert.';
+      if (/password/i.test(msg)) return 'Passwort entspricht nicht den Anforderungen.';
+      return msg;
+    }
+  </script>
+</body>
+</html>

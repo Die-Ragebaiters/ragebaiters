@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard | die Ragebaiters</title>
+  <link rel="icon" type="image/png" href="images/logo.png">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+  <div class="top-banner">
+    <img src="images/banner2.png" alt="die Ragebaiters Banner" />
+  </div>
+
+  <header class="container">
+    <nav class="nav">
+      <div style="font-weight: 900; font-size: 1.6rem;">die Ragebaiters</div>
+      <div class="nav-links">
+        <a href="index.html">Startseite</a>
+        <a href="team.html">Team</a>
+        <a href="mediathek.html">Mediathek</a>
+        <a href="impressum.html">Impressum</a>
+        <a class="social-icon" href="https://www.youtube.com/@RagebaitersAS" target="_blank" rel="noopener" aria-label="YouTube" title="YouTube">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M23.498 6.186a2.999 2.999 0 0 0-2.112-2.122C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.386.564A2.999 2.999 0 0 0 .502 6.186C0 8.074 0 12 0 12s0 3.926.502 5.814a2.999 2.999 0 0 0 2.112 2.122C4.495 20.5 12 20.5 12 20.5s7.505 0 9.386-.564a2.999 2.999 0 0 0 2.112-2.122C24 15.926 24 12 24 12s0-3.926-.502-5.814zM9.75 15.568V8.432L15.818 12 9.75 15.568z"/>
+          </svg>
+        </a>
+        <a class="social-icon" href="https://www.instagram.com/die_ragebaiters/" target="_blank" rel="noopener" aria-label="Instagram" title="Instagram">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+          </svg>
+        </a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section class="section" id="mainSection" hidden>
+      <span class="eyebrow">Interner Bereich</span>
+      <h2 style="margin: 10px 0 4px;">Willkommen, <span id="hello">…</span></h2>
+      <p style="color: var(--muted); margin: 0 0 30px;">
+        Lade hier Fotos hoch. Sie erscheinen automatisch in der Mediathek.
+      </p>
+
+      <div class="card upload-card">
+        <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden>
+
+        <div class="upload-dropzone" id="dropzone">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" class="upload-icon">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <h3 style="margin: 10px 0 6px;">Bilder hier ablegen</h3>
+          <p style="color: var(--muted); margin: 0;">oder klicken zum Auswählen</p>
+          <p style="color: var(--muted); font-size: 0.8rem; margin-top: 10px;">
+            JPG, PNG, WebP, GIF · max. 8 MB pro Datei
+          </p>
+        </div>
+
+        <div id="uploadList" class="upload-list"></div>
+      </div>
+
+      <h3 style="margin: 50px 0 20px;">Meine Fotos (<span id="count">0</span>)</h3>
+      <div id="myPhotos"></div>
+    </section>
+
+    <section class="section" id="loading" style="text-align:center; color: var(--muted);">
+      Lade…
+    </section>
+  </main>
+
+  <footer class="footer container">
+    <div style="font-weight: 800;">die Ragebaiters</div>
+    <div style="font-size: 0.8rem; opacity: 0.6;">Est. 2026 • Made by sneiper0</div>
+  </footer>
+
+  <script src="config.js"></script>
+  <script type="module">
+    import { supabase, initPage, getSessionUser, getProfile } from './auth.js';
+    await initPage('dashboard');
+
+    const user = await getSessionUser();
+    if (!user) { location.href = 'login.html'; }
+
+    const profile = await getProfile(user.id);
+    document.getElementById('hello').textContent = profile?.username || user.email;
+    document.getElementById('loading').hidden = true;
+    document.getElementById('mainSection').hidden = false;
+
+    const MAX_BYTES = 8 * 1024 * 1024;
+    const ALLOWED_MIME = ['image/jpeg','image/png','image/webp','image/gif'];
+
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const listEl   = document.getElementById('uploadList');
+    const myPhotos = document.getElementById('myPhotos');
+    const countEl  = document.getElementById('count');
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    ['dragover','dragenter'].forEach(ev => dropzone.addEventListener(ev, e => {
+      e.preventDefault(); dropzone.classList.add('is-dragover');
+    }));
+    ['dragleave','drop'].forEach(ev => dropzone.addEventListener(ev, e => {
+      e.preventDefault(); dropzone.classList.remove('is-dragover');
+    }));
+    dropzone.addEventListener('drop', e => {
+      if (e.dataTransfer?.files?.length) handle(e.dataTransfer.files);
+    });
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length) handle(fileInput.files);
+      fileInput.value = '';
+    });
+
+    function handle(files) { [...files].forEach(uploadOne); }
+
+    async function uploadOne(file) {
+      const row = document.createElement('div');
+      row.className = 'upload-row';
+      row.innerHTML = `
+        <div class="upload-row-name">${escapeHtml(file.name)}</div>
+        <div class="upload-row-bar"><span></span></div>
+        <div class="upload-row-status">0 %</div>`;
+      listEl.appendChild(row);
+      const bar = row.querySelector('.upload-row-bar span');
+      const status = row.querySelector('.upload-row-status');
+
+      if (!ALLOWED_MIME.includes(file.type)) return fail(row, status, 'Dateityp nicht erlaubt');
+      if (file.size > MAX_BYTES) return fail(row, status, 'Datei zu groß (max 8 MB)');
+
+      const ext  = (file.name.split('.').pop() || 'jpg').toLowerCase();
+      const key  = `${user.id}/${Date.now()}_${Math.random().toString(36).slice(2,8)}.${ext}`;
+
+      bar.style.width = '30%'; status.textContent = '30 %';
+
+      const { error: upErr } = await supabase.storage
+        .from('photos')
+        .upload(key, file, { cacheControl: '3600', contentType: file.type });
+      if (upErr) return fail(row, status, upErr.message);
+
+      bar.style.width = '70%'; status.textContent = '70 %';
+
+      // Bildgröße ermitteln
+      const dims = await readImageDims(file).catch(() => ({ width: null, height: null }));
+
+      const { error: dbErr } = await supabase.from('photos').insert({
+        user_id: user.id,
+        storage_path: key,
+        title: stripExt(file.name).slice(0, 160),
+        mime: file.type,
+        size_bytes: file.size,
+        width: dims.width,
+        height: dims.height,
+      });
+      if (dbErr) return fail(row, status, dbErr.message);
+
+      bar.style.width = '100%';
+      status.textContent = '✓ fertig';
+      row.classList.add('is-done');
+      setTimeout(loadMyPhotos, 400);
+    }
+
+    function fail(row, status, msg) {
+      status.textContent = '✗ ' + msg;
+      row.classList.add('is-error');
+    }
+    function stripExt(n) { return n.replace(/\.[^.]+$/, ''); }
+    function readImageDims(file) {
+      return new Promise((res, rej) => {
+        const img = new Image();
+        img.onload  = () => res({ width: img.naturalWidth, height: img.naturalHeight });
+        img.onerror = rej;
+        img.src = URL.createObjectURL(file);
+      });
+    }
+
+    async function loadMyPhotos() {
+      const { data, error } = await supabase
+        .from('photos')
+        .select('id, storage_path, title, uploaded_at')
+        .eq('user_id', user.id)
+        .order('uploaded_at', { ascending: false });
+      if (error) {
+        myPhotos.innerHTML = '<div class="alert alert-error">' + escapeHtml(error.message) + '</div>';
+        return;
+      }
+      countEl.textContent = data.length;
+      if (!data.length) {
+        myPhotos.innerHTML = '<div class="card" style="text-align:center; color: var(--muted);">Noch keine Bilder hochgeladen.</div>';
+        return;
+      }
+      myPhotos.innerHTML = '<div class="photo-grid"></div>';
+      const grid = myPhotos.querySelector('.photo-grid');
+      for (const p of data) {
+        const { data: pub } = supabase.storage.from('photos').getPublicUrl(p.storage_path);
+        const fig = document.createElement('figure');
+        fig.className = 'photo-item';
+        fig.innerHTML = `
+          <a href="${pub.publicUrl}" target="_blank" rel="noopener">
+            <img src="${pub.publicUrl}" alt="${escapeHtml(p.title || '')}" loading="lazy">
+          </a>
+          <figcaption>
+            <span>${escapeHtml(p.title || '')}</span>
+            <button class="btn-delete" type="button" data-id="${p.id}" data-path="${encodeURIComponent(p.storage_path)}" title="Löschen">✕</button>
+          </figcaption>`;
+        grid.appendChild(fig);
+      }
+      grid.querySelectorAll('.btn-delete').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Dieses Foto wirklich löschen?')) return;
+          const id   = Number(btn.dataset.id);
+          const path = decodeURIComponent(btn.dataset.path);
+          const { error: sErr } = await supabase.storage.from('photos').remove([path]);
+          if (sErr) return alert(sErr.message);
+          const { error: dErr } = await supabase.from('photos').delete().eq('id', id);
+          if (dErr) return alert(dErr.message);
+          loadMyPhotos();
+        });
+      });
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    loadMyPhotos();
+  </script>
+</body>
+</html>
