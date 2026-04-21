@@ -1,5 +1,6 @@
 -- Ragebaiters Admin Dashboard / Supabase Setup
 -- Diese Datei im Supabase SQL Editor ausfuehren.
+-- Enthält auch die Nathan-Rolle inkl. interner Mediathek-Sichtbarkeit.
 
 drop function if exists public.admin_list_invites();
 drop function if exists public.admin_create_invite(text);
@@ -7,6 +8,8 @@ drop function if exists public.admin_create_invite(text, text);
 drop function if exists public.admin_create_invite(text, text, text);
 drop function if exists public.dashboard_list_members();
 drop function if exists public.redeem_invite(text);
+drop function if exists public.list_gallery_photos(boolean);
+drop function if exists public.get_latest_gallery_photo(boolean);
 
 create table if not exists public.site_settings (
   key text primary key,
@@ -20,7 +23,7 @@ alter table public.profiles
 
 alter table public.profiles
   add constraint profiles_role_check
-  check (role in ('observer', 'member', 'admin'));
+  check (role in ('observer', 'member', 'nathan', 'admin'));
 
 insert into public.site_settings (key, value_text)
 values ('homepage_banner_variant', 'team')
@@ -31,13 +34,32 @@ alter table public.invites add column if not exists created_by uuid references a
 alter table public.invites add column if not exists used_at timestamptz;
 alter table public.invites add column if not exists used_by uuid references auth.users (id) on delete set null;
 alter table public.invites add column if not exists role text not null default 'member';
+alter table public.photos add column if not exists visibility text not null default 'public';
+alter table public.photos alter column visibility set default 'public';
 
 alter table public.invites
   drop constraint if exists invites_role_check;
 
 alter table public.invites
   add constraint invites_role_check
-  check (role in ('observer', 'member', 'admin'));
+  check (role in ('observer', 'member', 'nathan', 'admin'));
+
+alter table public.photos
+  drop constraint if exists photos_visibility_check;
+
+alter table public.photos
+  add constraint photos_visibility_check
+  check (visibility in ('public', 'nathan_only'));
+
+update public.photos p
+set visibility = 'nathan_only'
+from public.profiles pr
+where pr.id = p.user_id
+  and pr.role = 'nathan';
+
+update public.photos
+set visibility = 'public'
+where visibility is null;
 
 create or replace function public.check_invite_code(p_code text)
 returns boolean
@@ -111,6 +133,16 @@ as $$
     (select role from public.profiles where id = coalesce(p_user_id, auth.uid())),
     'observer'
   );
+$$;
+
+create or replace function public.can_view_nathan_posts(p_user_id uuid default auth.uid())
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select public.current_user_role(coalesce(p_user_id, auth.uid())) in ('admin', 'nathan');
 $$;
 
 create or replace function public.get_homepage_banner()
@@ -212,7 +244,7 @@ begin
     v_code := 'RAGE-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 10));
   end if;
 
-  if v_role not in ('observer', 'member', 'admin') then
+  if v_role not in ('observer', 'member', 'nathan', 'admin') then
     raise exception 'Ungueltige Rollen-Zuordnung fuer Einladungscode.';
   end if;
 
@@ -292,6 +324,61 @@ as $$
   order by coalesce(p.username, split_part(u.email::text, '@', 1)) asc;
 $$;
 
+create or replace function public.list_gallery_photos(p_include_nathan boolean default false)
+returns table (
+  id bigint,
+  storage_path text,
+  title text,
+  caption text,
+  author text,
+  uploaded_at timestamptz
+)
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select
+    p.id,
+    p.storage_path,
+    p.title,
+    p.caption,
+    coalesce(pr.username, 'anonym') as author,
+    p.uploaded_at
+  from public.photos p
+  left join public.profiles pr on pr.id = p.user_id
+  where p.visibility = 'public'
+     or (
+       p.visibility = 'nathan_only'
+       and p_include_nathan
+       and public.can_view_nathan_posts()
+     )
+  order by p.uploaded_at desc;
+$$;
+
+create or replace function public.get_latest_gallery_photo(p_include_nathan boolean default false)
+returns table (
+  id bigint,
+  storage_path text,
+  title text,
+  caption text,
+  author text,
+  uploaded_at timestamptz
+)
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select *
+  from public.list_gallery_photos(p_include_nathan)
+  limit 1;
+$$;
+
+create or replace view public.photos_public as
+select *
+from public.list_gallery_photos(false);
+
 create or replace function public.admin_update_user(
   p_user_id uuid,
   p_username text,
@@ -325,7 +412,7 @@ begin
     raise exception 'Der Benutzername enthaelt ungueltige Zeichen.';
   end if;
 
-  if v_role not in ('observer', 'member', 'admin') then
+  if v_role not in ('observer', 'member', 'nathan', 'admin') then
     raise exception 'Ungueltige Rolle.';
   end if;
 
@@ -404,11 +491,16 @@ grant execute on function public.check_invite_code(text) to anon, authenticated;
 grant execute on function public.redeem_invite(text) to authenticated;
 grant execute on function public.is_admin(uuid) to authenticated;
 grant execute on function public.current_user_role(uuid) to authenticated;
+grant execute on function public.can_view_nathan_posts(uuid) to authenticated;
 grant execute on function public.admin_set_homepage_banner(text) to authenticated;
 grant execute on function public.admin_list_invites() to authenticated;
 grant execute on function public.admin_create_invite(text, text, text) to authenticated;
 grant execute on function public.admin_delete_invite(text) to authenticated;
 grant execute on function public.admin_list_users() to authenticated;
 grant execute on function public.dashboard_list_members() to authenticated;
+grant execute on function public.list_gallery_photos(boolean) to anon, authenticated;
+grant execute on function public.get_latest_gallery_photo(boolean) to anon, authenticated;
 grant execute on function public.admin_update_user(uuid, text, text) to authenticated;
 grant execute on function public.admin_delete_user(uuid) to authenticated;
+
+grant select on public.photos_public to anon, authenticated;
