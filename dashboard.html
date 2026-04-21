@@ -49,6 +49,7 @@
         <div>
           <h2 style="margin: 10px 0 4px;">Willkommen, <span id="hello">...</span></h2>
           <p style="color: var(--muted); margin: 0;">Verwalte hier Uploads, Einladungen, Startseiten-Banner und Benutzer.</p>
+          <p style="color: var(--accent); margin: 8px 0 0; font-size: 0.9rem; font-weight: 700;">Dashboard-Version: 2026-04-21 Review 1</p>
         </div>
         <div class="dashboard-role" id="roleBadge">Mitglied</div>
       </div>
@@ -85,7 +86,7 @@
             <div class="panel-head">
               <div>
                 <h3>Uploads & Mediathek</h3>
-                <p>Lade hier Fotos hoch. Sie erscheinen automatisch in der Mediathek.</p>
+                <p>Lade hier Fotos hoch. Observer-Uploads muessen erst von einem Admin freigegeben werden.</p>
               </div>
             </div>
 
@@ -125,10 +126,18 @@
             <div class="panel-head panel-head-spaced">
               <div>
                 <h3>Meine Fotos (<span id="count">0</span>)</h3>
-                <p>Hier siehst du deine bereits hochgeladenen Bilder.</p>
+                <p>Hier siehst du deine bereits hochgeladenen Bilder inklusive Status.</p>
               </div>
             </div>
             <div id="myPhotos"></div>
+
+            <div class="panel-head panel-head-spaced role-admin-view">
+              <div>
+                <h3>Upload-Pruefung</h3>
+                <p>Observer-Uploads pruefen, freigeben oder intern als Troll-Post umwandeln.</p>
+              </div>
+            </div>
+            <div id="pendingReviews" class="role-admin-view"></div>
           </section>
 
           <section class="dashboard-view role-admin-view" id="view-invites" hidden>
@@ -179,7 +188,6 @@
                     <select id="inviteRoleInput">
                       <option value="observer">Beobachter</option>
                       <option value="member" selected>Mitglied</option>
-                      <option value="nathan">Nathan</option>
                       <option value="admin">Admin</option>
                     </select>
                   </label>

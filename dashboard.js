@@ -4,6 +4,8 @@ await initPage('dashboard');
 
 const MAX_BYTES = 8 * 1024 * 1024;
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const TROLL_IMAGE_SENTINEL = '__local__/images/nathanrole.png';
+const TROLL_IMAGE_CAPTION = 'schabbat schalom';
 const BANNER_OPTIONS = {
   sponsor: { src: 'images/banner.png', label: 'Sponsor' },
   team: { src: 'images/banner2.png', label: 'Team' }
@@ -27,6 +29,7 @@ const captionInput = document.getElementById('captionInput');
 const uploadList = document.getElementById('uploadList');
 const myPhotos = document.getElementById('myPhotos');
 const countEl = document.getElementById('count');
+const pendingReviews = document.getElementById('pendingReviews');
 
 const inviteForm = document.getElementById('inviteForm');
 const inviteCodeInput = document.getElementById('inviteCodeInput');
@@ -75,7 +78,7 @@ if (!state.profile) {
 
 state.role = normalizeRole(state.profile?.role);
 state.isAdmin = state.role === 'admin';
-state.canUpload = state.role === 'member' || state.role === 'admin';
+state.canUpload = state.role === 'observer' || state.role === 'member' || state.role === 'admin';
 state.canViewUsers = state.role === 'member' || state.role === 'admin';
 helloEl.textContent = state.profile?.username || state.user.email || 'Mitglied';
 roleBadge.textContent = roleLabel(state.role);
@@ -112,6 +115,7 @@ if (state.canViewUsers) {
 }
 if (state.isAdmin) {
   await Promise.all([
+    loadPendingReviews(),
     loadInvites(),
     loadBannerSetting()
   ]);
@@ -207,7 +211,7 @@ function setupAdminActions() {
 
 function setupWelcome() {
   const introByRole = {
-    observer: 'Du bist als Beobachter eingeloggt. Aktuell steht dir nur dieser Willkommensbereich zur Verfuegung.',
+    observer: 'Du bist als Beobachter eingeloggt. Du kannst Bilder hochladen, diese muessen aber erst von einem Admin freigegeben werden.',
     member: 'Du bist als Mitglied eingeloggt. Du kannst Bilder hochladen und die Mitgliederliste ansehen.',
     admin: 'Du bist als Admin eingeloggt. Alle Bereiche des Dashboards stehen dir vollstaendig zur Verfuegung.'
   };
@@ -216,7 +220,11 @@ function setupWelcome() {
 
   const cards = [
     capabilityCard('Willkommensbereich', 'Immer sichtbar', 'Deine aktuelle Rolle und deine freigeschalteten Bereiche.'),
-    capabilityCard('Uploads', state.canUpload ? 'Freigeschaltet' : 'Gesperrt', state.canUpload ? 'Bilder hochladen und eigene Uploads verwalten.' : 'Nur fuer Mitglieder und Admins freigeschaltet.'),
+    capabilityCard('Uploads', state.canUpload ? 'Freigeschaltet' : 'Gesperrt', state.role === 'observer'
+      ? 'Bilder hochladen. Ein Admin muss sie freigeben, bevor sie oeffentlich erscheinen.'
+      : state.canUpload
+        ? 'Bilder hochladen und eigene Uploads verwalten.'
+        : 'Nur fuer Mitglieder, Beobachter und Admins freigeschaltet.'),
     capabilityCard('Mitglieder', state.canViewUsers ? 'Freigeschaltet' : 'Gesperrt', state.canViewUsers ? (state.isAdmin ? 'Alle Benutzer sehen und verwalten.' : 'Mitgliederliste in reiner Lesesicht.') : 'Nur fuer Mitglieder und Admins freigeschaltet.'),
     capabilityCard('Admin-Funktionen', state.isAdmin ? 'Freigeschaltet' : 'Gesperrt', state.isAdmin ? 'Einladungscodes, Banner und Benutzerverwaltung komplett verfuegbar.' : 'Nur fuer Admins sichtbar.')
   ];
@@ -255,11 +263,17 @@ async function uploadOne(file, caption) {
   if (!ALLOWED_MIME.includes(file.type)) return failUpload(row, status, 'Dateityp nicht erlaubt');
   if (file.size > MAX_BYTES) return failUpload(row, status, 'Datei zu gross (max. 8 MB)');
 
-  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
-  const key = `${state.user.id}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
-
   bar.style.width = '30%';
   status.textContent = '30 %';
+
+  let key = null;
+  let mime = file.type;
+  let sizeBytes = file.size;
+  let dims = await readImageDims(file).catch(() => ({ width: null, height: null }));
+  let title = stripExt(file.name).slice(0, 160);
+  let finalCaption = caption || null;
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  key = `${state.user.id}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
 
   const { error: uploadError } = await supabase.storage
     .from('photos')
@@ -269,16 +283,18 @@ async function uploadOne(file, caption) {
   bar.style.width = '70%';
   status.textContent = '70 %';
 
-  const dims = await readImageDims(file).catch(() => ({ width: null, height: null }));
+  let visibility = state.role === 'observer' ? 'pending_review' : 'public';
+
   const { error: dbError } = await supabase.from('photos').insert({
     user_id: state.user.id,
     storage_path: key,
-    title: stripExt(file.name).slice(0, 160),
-    caption: caption || null,
-    mime: file.type,
-    size_bytes: file.size,
+    title,
+    caption: finalCaption,
+    mime,
+    size_bytes: sizeBytes,
     width: dims.width,
-    height: dims.height
+    height: dims.height,
+    visibility
   });
   if (dbError) return failUpload(row, status, dbError.message);
 
@@ -287,6 +303,7 @@ async function uploadOne(file, caption) {
   row.classList.add('is-done');
   if (captionInput.value.trim() === caption) captionInput.value = '';
   setTimeout(loadMyPhotos, 400);
+  if (state.isAdmin) setTimeout(loadPendingReviews, 400);
 }
 
 function failUpload(row, status, message) {
@@ -297,7 +314,7 @@ function failUpload(row, status, message) {
 async function loadMyPhotos() {
   const { data, error } = await supabase
     .from('photos')
-    .select('id, storage_path, title, caption, uploaded_at')
+    .select('id, storage_path, title, caption, uploaded_at, visibility')
     .eq('user_id', state.user.id)
     .order('uploaded_at', { ascending: false });
 
@@ -315,20 +332,21 @@ async function loadMyPhotos() {
   myPhotos.innerHTML = '<div class="photo-grid"></div>';
   const grid = myPhotos.querySelector('.photo-grid');
   for (const photo of data) {
-    const { data: pub } = supabase.storage.from('photos').getPublicUrl(photo.storage_path);
+    const publicUrl = resolvePhotoUrl(photo.storage_path);
     const fig = document.createElement('figure');
     fig.className = 'photo-item';
     const actions = state.isAdmin
       ? `<button class="btn-delete" type="button" data-id="${photo.id}" data-path="${encodeURIComponent(photo.storage_path)}" title="Loeschen">x</button>`
       : '';
     fig.innerHTML = `
-      <a href="${pub.publicUrl}" target="_blank" rel="noopener">
-        <img src="${pub.publicUrl}" alt="${escapeHtml(photo.title || '')}" loading="lazy">
+      <a href="${publicUrl}" target="_blank" rel="noopener">
+        <img src="${publicUrl}" alt="${escapeHtml(photo.title || '')}" loading="lazy">
       </a>
       <figcaption>
         <div class="photo-copy">
           <span>${escapeHtml(photo.title || '')}</span>
           ${photo.caption ? `<small>${escapeHtml(photo.caption)}</small>` : ''}
+          <small>Status: ${escapeHtml(photoStatusLabel(photo.visibility))}</small>
         </div>
         ${actions}
       </figcaption>`;
@@ -340,11 +358,105 @@ async function loadMyPhotos() {
       if (!confirm('Dieses Foto wirklich loeschen?')) return;
       const id = Number(btn.dataset.id);
       const path = decodeURIComponent(btn.dataset.path);
-      const { error: storageError } = await supabase.storage.from('photos').remove([path]);
-      if (storageError) return alert(storageError.message);
+      if (!isLocalPhotoPath(path)) {
+        const { error: storageError } = await supabase.storage.from('photos').remove([path]);
+        if (storageError) return alert(storageError.message);
+      }
       const { error: dbError } = await supabase.from('photos').delete().eq('id', id);
       if (dbError) return alert(dbError.message);
       loadMyPhotos();
+    });
+  });
+}
+
+async function loadPendingReviews() {
+  if (!state.isAdmin || !pendingReviews) return;
+
+  pendingReviews.innerHTML = '<div class="card" style="text-align:center; color: var(--muted);">Pruefe Uploads...</div>';
+  const { data, error } = await supabase
+    .from('photos')
+    .select('id, storage_path, title, caption, uploaded_at, visibility, user_id')
+    .eq('visibility', 'pending_review')
+    .order('uploaded_at', { ascending: false });
+
+  if (error) {
+    pendingReviews.innerHTML = `<div class="alert alert-error">${escapeHtml(error.message)}</div>`;
+    return;
+  }
+
+  if (!data?.length) {
+    pendingReviews.innerHTML = '<div class="card" style="text-align:center; color: var(--muted);">Keine Uploads warten auf Freigabe.</div>';
+    return;
+  }
+
+  const userIds = [...new Set(data.map(photo => photo.user_id).filter(Boolean))];
+  const authorsById = {};
+  if (userIds.length) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, username')
+      .in('id', userIds);
+    (profiles || []).forEach(profile => {
+      authorsById[profile.id] = profile.username || 'Unbekannt';
+    });
+  }
+
+  pendingReviews.innerHTML = '<div class="photo-grid"></div>';
+  const grid = pendingReviews.querySelector('.photo-grid');
+
+  for (const photo of data) {
+    const publicUrl = resolvePhotoUrl(photo.storage_path);
+    const fig = document.createElement('figure');
+    fig.className = 'photo-item';
+    fig.innerHTML = `
+      <a href="${publicUrl}" target="_blank" rel="noopener">
+        <img src="${publicUrl}" alt="${escapeHtml(photo.title || '')}" loading="lazy">
+      </a>
+      <figcaption>
+        <div class="photo-copy">
+          <span>${escapeHtml(photo.title || '')}</span>
+          ${photo.caption ? `<small>${escapeHtml(photo.caption)}</small>` : ''}
+          <small>von ${escapeHtml(authorsById[photo.user_id] || 'Unbekannt')}</small>
+          <small>${formatDateTime(photo.uploaded_at)}</small>
+        </div>
+        <div class="table-actions">
+          <button class="btn-tertiary" type="button" data-action="approve" data-id="${photo.id}">Freigeben</button>
+          <button class="btn-danger" type="button" data-action="troll" data-id="${photo.id}">Troll</button>
+        </div>
+      </figcaption>`;
+    grid.appendChild(fig);
+  }
+
+  grid.querySelectorAll('[data-action="approve"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const photoId = Number(btn.dataset.id);
+      const { error: updateError } = await supabase
+        .from('photos')
+        .update({ visibility: 'public' })
+        .eq('id', photoId);
+      if (updateError) return alert(updateError.message);
+      await Promise.all([loadPendingReviews(), loadMyPhotos()]);
+    });
+  });
+
+  grid.querySelectorAll('[data-action="troll"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const photoId = Number(btn.dataset.id);
+      const { error: updateError } = await supabase
+        .from('photos')
+        .update({
+          storage_path: TROLL_IMAGE_SENTINEL,
+          title: 'Nathan Role',
+          caption: TROLL_IMAGE_CAPTION,
+          mime: 'image/png',
+          size_bytes: null,
+          width: null,
+          height: null,
+          visibility: 'troll_internal'
+        })
+        .eq('id', photoId);
+      if (updateError) return alert(updateError.message);
+      await Promise.all([loadPendingReviews(), loadMyPhotos()]);
     });
   });
 }
@@ -662,6 +774,18 @@ function roleLabel(role) {
   return labels[normalizeRole(role)] || 'Beobachter';
 }
 
+function isLocalPhotoPath(path) {
+  return String(path || '').startsWith('__local__/');
+}
+
+function resolvePhotoUrl(path) {
+  if (isLocalPhotoPath(path)) {
+    return path.replace('__local__/', '');
+  }
+  const { data: pub } = supabase.storage.from('photos').getPublicUrl(path);
+  return pub.publicUrl;
+}
+
 function capabilityCard(title, stateLabel, copy) {
   return `
     <article class="card capability-card">
@@ -669,6 +793,15 @@ function capabilityCard(title, stateLabel, copy) {
       <strong>${escapeHtml(stateLabel)}</strong>
       <p>${escapeHtml(copy)}</p>
     </article>`;
+}
+
+function photoStatusLabel(visibility) {
+  const labels = {
+    public: 'Oeffentlich',
+    pending_review: 'Wartet auf Freigabe',
+    troll_internal: 'Nur intern'
+  };
+  return labels[visibility] || 'Intern';
 }
 
 function formatDateTime(value) {
