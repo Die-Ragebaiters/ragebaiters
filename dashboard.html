@@ -149,16 +149,20 @@
                   <p>Entweder selbst eingeben oder automatisch generieren lassen.</p>
                 </div>
               </div>
-              <form id="inviteForm" class="admin-form">
-                <div class="form-row">
+              <form id="inviteForm" class="admin-form" autocomplete="off">
+                <div class="form-row form-row-two">
                   <label class="field">
                     <span>Einladungscode</span>
                     <input type="text" id="inviteCodeInput" maxlength="64" placeholder="z.B. TEAM-APRIL-2026">
                   </label>
+                  <label class="field">
+                    <span>Gedacht fuer</span>
+                    <input type="text" id="inviteForInput" maxlength="120" placeholder="z.B. Max / neues Teammitglied">
+                  </label>
                 </div>
                 <div class="form-actions">
                   <button type="button" class="btn-secondary" id="generateInviteBtn">Code generieren</button>
-                  <button type="submit" class="btn-primary">Code erstellen</button>
+                  <button type="submit" class="btn-primary" id="createInviteBtn">Code erstellen</button>
                 </div>
               </form>
               <div class="admin-message" id="inviteMessage" hidden></div>
@@ -170,6 +174,7 @@
                   <thead>
                     <tr>
                       <th>Code</th>
+                      <th>Gedacht fuer</th>
                       <th>Status</th>
                       <th>Erstellt</th>
                       <th>Genutzt von</th>
@@ -179,7 +184,7 @@
                   </thead>
                   <tbody id="inviteRows">
                     <tr>
-                      <td colspan="6" class="table-empty">Noch keine Einladungscodes geladen.</td>
+                      <td colspan="7" class="table-empty">Noch keine Einladungscodes geladen.</td>
                     </tr>
                   </tbody>
                 </table>

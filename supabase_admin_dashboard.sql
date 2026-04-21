@@ -112,6 +112,7 @@ $$;
 create or replace function public.admin_list_invites()
 returns table (
   code text,
+  invite_for text,
   created_at timestamptz,
   created_by uuid,
   created_by_username text,
@@ -127,6 +128,7 @@ stable
 as $$
   select
     i.code,
+    i."for" as invite_for,
     i.created_at,
     i.created_by,
     creator.username as created_by_username,
@@ -141,7 +143,10 @@ as $$
   order by i.created_at desc nulls last, i.code asc;
 $$;
 
-create or replace function public.admin_create_invite(p_code text default null)
+create or replace function public.admin_create_invite(
+  p_code text default null,
+  p_for text default null
+)
 returns text
 language plpgsql
 security definer
@@ -159,8 +164,8 @@ begin
     v_code := 'RAGE-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 10));
   end if;
 
-  insert into public.invites (code, created_at, created_by)
-  values (v_code, now(), auth.uid());
+  insert into public.invites (code, "for", created_at, created_by)
+  values (v_code, nullif(trim(coalesce(p_for, '')), ''), now(), auth.uid());
 
   return v_code;
 exception
@@ -308,7 +313,7 @@ grant execute on function public.redeem_invite(text) to authenticated;
 grant execute on function public.is_admin(uuid) to authenticated;
 grant execute on function public.admin_set_homepage_banner(text) to authenticated;
 grant execute on function public.admin_list_invites() to authenticated;
-grant execute on function public.admin_create_invite(text) to authenticated;
+grant execute on function public.admin_create_invite(text, text) to authenticated;
 grant execute on function public.admin_delete_invite(text) to authenticated;
 grant execute on function public.admin_list_users() to authenticated;
 grant execute on function public.admin_update_user(uuid, text, text) to authenticated;
