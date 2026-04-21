@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard | die Ragebaiters</title>
+  <link rel="icon" type="image/png" href="images/logo.png">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+  <div class="top-banner">
+    <img src="images/banner2.png" alt="die Ragebaiters Banner" />
+  </div>
+
+  <header class="container">
+    <nav class="nav">
+      <div style="font-weight: 900; font-size: 1.6rem;">die Ragebaiters</div>
+      <div class="nav-links">
+        <a href="index.html">Startseite</a>
+        <a href="team.html">Team</a>
+        <a href="mediathek.html">Mediathek</a>
+        <a href="impressum.html">Impressum</a>
+        <a class="social-icon" href="https://www.youtube.com/@RagebaitersAS" target="_blank" rel="noopener" aria-label="YouTube" title="YouTube">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M23.498 6.186a2.999 2.999 0 0 0-2.112-2.122C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.386.564A2.999 2.999 0 0 0 .502 6.186C0 8.074 0 12 0 12s0 3.926.502 5.814a2.999 2.999 0 0 0 2.112 2.122C4.495 20.5 12 20.5 12 20.5s7.505 0 9.386-.564a2.999 2.999 0 0 0 2.112-2.122C24 15.926 24 12 24 12s0-3.926-.502-5.814zM9.75 15.568V8.432L15.818 12 9.75 15.568z"/>
+          </svg>
+        </a>
+        <a class="social-icon" href="https://www.instagram.com/die_ragebaiters/" target="_blank" rel="noopener" aria-label="Instagram" title="Instagram">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+          </svg>
+        </a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section class="section" id="loading" style="text-align:center; color: var(--muted);">
+      Lade Dashboard...
+    </section>
+
+    <section class="section" id="mainSection" hidden>
+      <span class="eyebrow">Interner Bereich</span>
+      <div class="dashboard-header">
+        <div>
+          <h2 style="margin: 10px 0 4px;">Willkommen, <span id="hello">...</span></h2>
+          <p style="color: var(--muted); margin: 0;">Verwalte hier Uploads, Einladungen, Startseiten-Banner und Benutzer.</p>
+          <p style="color: var(--accent); margin: 8px 0 0; font-size: 0.9rem; font-weight: 700;">Dashboard-Version: 2026-04-21 Nathan 1</p>
+        </div>
+        <div class="dashboard-role" id="roleBadge">Mitglied</div>
+      </div>
+
+      <div class="dashboard-shell">
+        <aside class="dashboard-sidebar card">
+          <div class="dashboard-sidebar-title">Bereiche</div>
+          <div class="dashboard-tabs" id="dashboardTabs">
+            <button type="button" class="dashboard-tab is-active" data-view="welcome">Willkommen</button>
+            <button type="button" class="dashboard-tab role-member-up" data-view="uploads">Uploads</button>
+            <button type="button" class="dashboard-tab role-member-up" data-view="users">Mitglieder</button>
+            <button type="button" class="dashboard-tab role-admin-only" data-view="invites">Einladungscodes</button>
+            <button type="button" class="dashboard-tab role-admin-only" data-view="banner">Startseiten-Banner</button>
+          </div>
+          <div class="dashboard-sidebar-note" id="memberNote" hidden>
+            Dein Zugriff richtet sich nach deiner Rolle. Admin-Funktionen bleiben nur fuer Team-Admins sichtbar.
+          </div>
+        </aside>
+
+        <div class="dashboard-content">
+          <section class="dashboard-view is-active" id="view-welcome">
+            <div class="card admin-card welcome-card">
+              <div class="panel-head compact">
+                <div>
+                  <h3>Willkommensbereich</h3>
+                  <p id="welcomeIntro">Hier siehst du deine Rolle und welche Bereiche dir aktuell freigeschaltet sind.</p>
+                </div>
+              </div>
+              <div class="welcome-grid" id="welcomeCapabilities"></div>
+            </div>
+          </section>
+
+          <section class="dashboard-view role-member-up-view" id="view-uploads" hidden>
+            <div class="panel-head">
+              <div>
+                <h3>Uploads & Mediathek</h3>
+                <p>Lade hier Fotos hoch. Sie erscheinen automatisch in der Mediathek.</p>
+              </div>
+            </div>
+
+            <div class="card upload-card">
+              <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden>
+
+              <div class="upload-meta">
+                <label class="field" for="captionInput">
+                  <span>Bildtext</span>
+                  <textarea
+                    id="captionInput"
+                    class="upload-caption-input"
+                    maxlength="500"
+                    placeholder="Optionaler Text zum Bild. Wenn du mehrere Bilder gleichzeitig auswaehlst, wird dieser Text fuer alle uebernommen."
+                  ></textarea>
+                </label>
+                <div class="upload-meta-hint">Maximal 500 Zeichen. Der Dateiname bleibt weiterhin der Bildtitel.</div>
+              </div>
+
+              <div class="upload-dropzone" id="dropzone">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" class="upload-icon">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <h3 style="margin: 10px 0 6px;">Bilder hier ablegen</h3>
+                <p style="color: var(--muted); margin: 0;">oder klicken zum Auswaehlen</p>
+                <p style="color: var(--muted); font-size: 0.8rem; margin-top: 10px;">
+                  JPG, PNG, WebP, GIF · max. 8 MB pro Datei
+                </p>
+              </div>
+
+              <div id="uploadList" class="upload-list"></div>
+            </div>
+
+            <div class="panel-head panel-head-spaced">
+              <div>
+                <h3>Meine Fotos (<span id="count">0</span>)</h3>
+                <p>Hier siehst du deine bereits hochgeladenen Bilder.</p>
+              </div>
+            </div>
+            <div id="myPhotos"></div>
+          </section>
+
+          <section class="dashboard-view role-admin-view" id="view-invites" hidden>
+            <div class="panel-head">
+              <div>
+                <h3>Einladungscodes</h3>
+                <p>Codes erstellen, kopieren, loeschen und die Nutzung direkt kontrollieren.</p>
+              </div>
+              <button type="button" class="btn-secondary" id="refreshInvitesBtn">Aktualisieren</button>
+            </div>
+
+            <div class="stats-grid" id="inviteStats">
+              <article class="card stat-card">
+                <span>Offene Codes</span>
+                <strong id="inviteOpenCount">0</strong>
+              </article>
+              <article class="card stat-card">
+                <span>Bereits genutzt</span>
+                <strong id="inviteUsedCount">0</strong>
+              </article>
+              <article class="card stat-card">
+                <span>Gesamt</span>
+                <strong id="inviteTotalCount">0</strong>
+              </article>
+            </div>
+
+            <div class="card admin-card">
+              <div class="panel-head compact">
+                <div>
+                  <h3>Neuen Code erstellen</h3>
+                  <p>Entweder selbst eingeben oder automatisch generieren lassen.</p>
+                </div>
+              </div>
+              <form id="inviteForm" class="admin-form" autocomplete="off">
+                <div class="form-row form-row-two">
+                  <label class="field">
+                    <span>Einladungscode</span>
+                    <input type="text" id="inviteCodeInput" maxlength="64" placeholder="z.B. TEAM-APRIL-2026">
+                  </label>
+                  <label class="field">
+                    <span>Gedacht fuer</span>
+                    <input type="text" id="inviteForInput" maxlength="120" placeholder="z.B. Max / neues Teammitglied">
+                  </label>
+                </div>
+                <div class="form-row">
+                  <label class="field">
+                    <span>Rolle nach Registrierung</span>
+                    <select id="inviteRoleInput">
+                      <option value="observer">Beobachter</option>
+                      <option value="member" selected>Mitglied</option>
+                      <option value="nathan">Nathan</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="form-actions">
+                  <button type="button" class="btn-secondary" id="generateInviteBtn">Code generieren</button>
+                  <button type="submit" class="btn-primary" id="createInviteBtn">Code erstellen</button>
+                </div>
+              </form>
+              <div class="admin-message" id="inviteMessage" hidden></div>
+            </div>
+
+            <div class="card admin-card">
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Code</th>
+                      <th>Gedacht fuer</th>
+                      <th>Rolle</th>
+                      <th>Status</th>
+                      <th>Erstellt</th>
+                      <th>Genutzt von</th>
+                      <th>Genutzt am</th>
+                      <th>Aktionen</th>
+                    </tr>
+                  </thead>
+                  <tbody id="inviteRows">
+                    <tr>
+                      <td colspan="8" class="table-empty">Noch keine Einladungscodes geladen.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section class="dashboard-view role-admin-view" id="view-banner" hidden>
+            <div class="panel-head">
+              <div>
+                <h3>Startseiten-Banner</h3>
+                <p>Waehle aus, welches Banner oben auf der Startseite angezeigt wird.</p>
+              </div>
+            </div>
+
+            <div class="banner-settings-grid">
+              <label class="card banner-choice">
+                <input type="radio" name="homepageBanner" value="sponsor">
+                <div class="banner-choice-copy">
+                  <strong>Sponsor</strong>
+                  <span>Nutze das Sponsor-Banner auf der Startseite.</span>
+                </div>
+                <img src="images/banner.png" alt="Sponsor Banner Vorschau">
+              </label>
+
+              <label class="card banner-choice">
+                <input type="radio" name="homepageBanner" value="team">
+                <div class="banner-choice-copy">
+                  <strong>Team</strong>
+                  <span>Nutze das Team-Banner auf der Startseite.</span>
+                </div>
+                <img src="images/banner2.png" alt="Team Banner Vorschau">
+              </label>
+            </div>
+
+            <div class="card admin-card">
+              <div class="panel-head compact">
+                <div>
+                  <h3>Aktive Auswahl</h3>
+                  <p>Die Auswahl wird sofort fuer die Startseite gespeichert.</p>
+                </div>
+                <button type="button" class="btn-primary" id="saveBannerBtn">Banner speichern</button>
+              </div>
+              <div class="banner-preview-wrap">
+                <img id="bannerPreview" class="banner-preview-image" src="images/banner2.png" alt="Banner Vorschau">
+              </div>
+              <div class="admin-message" id="bannerMessage" hidden></div>
+            </div>
+          </section>
+
+          <section class="dashboard-view role-member-up-view" id="view-users" hidden>
+            <div class="panel-head">
+              <div>
+                <h3 id="usersTitle">Mitglieder</h3>
+                <p id="usersIntro">Hier siehst du alle Benutzer der Website.</p>
+              </div>
+              <button type="button" class="btn-secondary" id="refreshUsersBtn">Aktualisieren</button>
+            </div>
+
+            <div class="card admin-card">
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead id="userTableHead">
+                    <tr>
+                      <th>Benutzer</th>
+                      <th>E-Mail</th>
+                      <th>Rolle</th>
+                      <th>Erstellt</th>
+                      <th>Letzter Login</th>
+                      <th>Aktionen</th>
+                    </tr>
+                  </thead>
+                  <tbody id="userRows">
+                    <tr>
+                      <td colspan="6" class="table-empty">Noch keine Benutzer geladen.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="admin-message" id="userMessage" hidden></div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer container">
+    <div style="font-weight: 800;">die Ragebaiters</div>
+    <div style="font-size: 0.8rem; opacity: 0.6;">Est. 2026 • Made by sneiper0</div>
+  </footer>
+
+  <script src="config.js"></script>
+  <script type="module" src="dashboard.js?v=2026-04-21-2"></script>
+</body>
+</html>

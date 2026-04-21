@@ -29,6 +29,7 @@
       <div class="nav-links">
         <a href="index.html">Startseite</a>
         <a class="active" href="team.html">Team</a>
+        <a href="mediathek.html">Mediathek</a>
         <a href="impressum.html">Impressum</a>
         <a class="social-icon" href="https://www.youtube.com/@RagebaitersAS" target="_blank" rel="noopener" aria-label="YouTube" title="YouTube">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -95,5 +96,10 @@
   </footer>
 
   <script src="script.js"></script>
+  <script src="config.js"></script>
+  <script type="module">
+    import { initPage } from './auth.js';
+    initPage('team');
+  </script>
 </body>
 </html>

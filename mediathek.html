@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mediathek | die Ragebaiters</title>
+  <link rel="icon" type="image/png" href="images/logo.png">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+  <div class="top-banner">
+    <img src="images/banner2.png" alt="die Ragebaiters Banner" />
+  </div>
+
+  <header class="container">
+    <nav class="nav">
+      <div style="font-weight: 900; font-size: 1.6rem;">die Ragebaiters</div>
+      <div class="nav-links">
+        <a href="index.html">Startseite</a>
+        <a href="team.html">Team</a>
+        <a class="active" href="mediathek.html">Mediathek</a>
+        <a href="impressum.html">Impressum</a>
+        <a class="social-icon" href="https://www.youtube.com/@RagebaitersAS" target="_blank" rel="noopener" aria-label="YouTube" title="YouTube">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M23.498 6.186a2.999 2.999 0 0 0-2.112-2.122C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.386.564A2.999 2.999 0 0 0 .502 6.186C0 8.074 0 12 0 12s0 3.926.502 5.814a2.999 2.999 0 0 0 2.112 2.122C4.495 20.5 12 20.5 12 20.5s7.505 0 9.386-.564a2.999 2.999 0 0 0 2.112-2.122C24 15.926 24 12 24 12s0-3.926-.502-5.814zM9.75 15.568V8.432L15.818 12 9.75 15.568z"/>
+          </svg>
+        </a>
+        <a class="social-icon" href="https://www.instagram.com/die_ragebaiters/" target="_blank" rel="noopener" aria-label="Instagram" title="Instagram">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+          </svg>
+        </a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section class="section">
+      <span class="eyebrow">Galerie</span>
+      <h2 style="margin: 10px 0 4px;">Mediathek</h2>
+      <p style="color: var(--muted); margin: 0 0 30px;">
+        Eindrücke und Momente der Ragebaiters.
+      </p>
+
+      <div id="gallery"></div>
+
+      <div id="lightbox" class="lightbox" role="dialog" aria-hidden="true">
+        <button class="lightbox-close" type="button" aria-label="Schließen">&times;</button>
+        <button class="lightbox-nav prev" type="button" aria-label="Vorheriges">‹</button>
+        <button class="lightbox-nav next" type="button" aria-label="Nächstes">›</button>
+        <img class="lightbox-img" src="" alt="">
+        <div class="lightbox-caption"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer container">
+    <div style="font-weight: 800;">die Ragebaiters</div>
+    <div style="font-size: 0.8rem; opacity: 0.6;">Est. 2026 • Made by sneiper0</div>
+  </footer>
+
+  <script src="config.js"></script>
+  <script type="module">
+    import { supabase, initPage, getSessionUser, getProfile } from './auth.js';
+    await initPage('mediathek');
+
+    const gallery = document.getElementById('gallery');
+    const currentUser = await getSessionUser();
+    const currentProfile = currentUser ? await getProfile(currentUser.id) : null;
+    const currentRole = normalizeRole(currentProfile?.role);
+    const canSeeNathanPosts = currentRole === 'admin' || currentRole === 'nathan';
+
+    const { data, error } = await supabase.rpc('list_gallery_photos', {
+      p_include_nathan: canSeeNathanPosts
+    });
+    const photos = Array.isArray(data) ? data : [];
+
+    if (error) {
+      gallery.innerHTML = '<div class="alert alert-error">' + escapeHtml(error.message) + '</div>';
+    } else if (!photos.length) {
+      gallery.innerHTML = '<div class="card" style="text-align:center; color: var(--muted);">Es wurden noch keine Fotos hochgeladen.</div>';
+    } else {
+      const grid = document.createElement('div');
+      grid.className = 'photo-grid lightbox-grid';
+      for (const p of photos) {
+        const imageUrl = resolvePhotoUrl(p.storage_path);
+        const fig = document.createElement('figure');
+        fig.className = 'photo-item';
+        fig.dataset.full = imageUrl;
+        fig.dataset.title = p.title || '';
+        fig.dataset.caption = p.caption || '';
+        fig.dataset.author = p.author || '';
+        fig.innerHTML = `
+          <img src="${imageUrl}" alt="${escapeHtml(p.title || 'Mediathek Bild')}" loading="lazy">`;
+        grid.appendChild(fig);
+      }
+      gallery.appendChild(grid);
+      initLightbox(grid);
+    }
+
+    function initLightbox(grid) {
+      const lb = document.getElementById('lightbox');
+      const img = lb.querySelector('.lightbox-img');
+      const cap = lb.querySelector('.lightbox-caption');
+      const btnClose = lb.querySelector('.lightbox-close');
+      const btnPrev  = lb.querySelector('.prev');
+      const btnNext  = lb.querySelector('.next');
+      const items = [...grid.querySelectorAll('.photo-item')];
+      let idx = -1;
+      function show(i) {
+        if (i < 0 || i >= items.length) return;
+        idx = i;
+        const it = items[i];
+        img.src = it.dataset.full;
+        cap.innerHTML = `
+          <strong>${escapeHtml(it.dataset.title)}</strong>
+          ${it.dataset.caption ? `<p>${escapeHtml(it.dataset.caption)}</p>` : ''}
+          ${it.dataset.author ? `<span>von ${escapeHtml(it.dataset.author)}</span>` : ''}`;
+        lb.classList.add('is-open');
+        lb.setAttribute('aria-hidden', 'false');
+      }
+      function close() {
+        lb.classList.remove('is-open');
+        lb.setAttribute('aria-hidden', 'true');
+        img.src = '';
+      }
+      items.forEach((it, i) => it.addEventListener('click', (e) => { e.preventDefault(); show(i); }));
+      btnClose.addEventListener('click', close);
+      btnPrev.addEventListener('click', () => show((idx - 1 + items.length) % items.length));
+      btnNext.addEventListener('click', () => show((idx + 1) % items.length));
+      lb.addEventListener('click', e => { if (e.target === lb) close(); });
+      document.addEventListener('keydown', e => {
+        if (!lb.classList.contains('is-open')) return;
+        if (e.key === 'Escape')     close();
+        if (e.key === 'ArrowLeft')  show((idx - 1 + items.length) % items.length);
+        if (e.key === 'ArrowRight') show((idx + 1) % items.length);
+      });
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function normalizeRole(role) {
+      return ['observer', 'member', 'nathan', 'admin'].includes(role) ? role : 'observer';
+    }
+
+    function resolvePhotoUrl(path) {
+      if (String(path || '').startsWith('__local__/')) {
+        return path.replace('__local__/', '');
+      }
+      const { data: pub } = supabase.storage.from('photos').getPublicUrl(path);
+      return pub.publicUrl;
+    }
+  </script>
+</body>
+</html>
