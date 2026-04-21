@@ -4,7 +4,9 @@
 drop function if exists public.admin_list_invites();
 drop function if exists public.admin_create_invite(text);
 drop function if exists public.admin_create_invite(text, text);
+drop function if exists public.admin_create_invite(text, text, text);
 drop function if exists public.dashboard_list_members();
+drop function if exists public.redeem_invite(text);
 
 create table if not exists public.site_settings (
   key text primary key,
@@ -12,6 +14,13 @@ create table if not exists public.site_settings (
   updated_at timestamptz not null default now(),
   updated_by uuid references auth.users (id) on delete set null
 );
+
+alter table public.profiles
+  drop constraint if exists profiles_role_check;
+
+alter table public.profiles
+  add constraint profiles_role_check
+  check (role in ('observer', 'member', 'admin'));
 
 insert into public.site_settings (key, value_text)
 values ('homepage_banner_variant', 'team')
@@ -21,6 +30,14 @@ alter table public.invites add column if not exists created_at timestamptz not n
 alter table public.invites add column if not exists created_by uuid references auth.users (id) on delete set null;
 alter table public.invites add column if not exists used_at timestamptz;
 alter table public.invites add column if not exists used_by uuid references auth.users (id) on delete set null;
+alter table public.invites add column if not exists role text not null default 'member';
+
+alter table public.invites
+  drop constraint if exists invites_role_check;
+
+alter table public.invites
+  add constraint invites_role_check
+  check (role in ('observer', 'member', 'admin'));
 
 create or replace function public.check_invite_code(p_code text)
 returns boolean
@@ -39,11 +56,13 @@ as $$
 $$;
 
 create or replace function public.redeem_invite(p_code text)
-returns boolean
+returns text
 language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  v_role text;
 begin
   if auth.uid() is null then
     raise exception 'Du musst eingeloggt sein, um einen Einladungscode einzuloesen.';
@@ -52,11 +71,17 @@ begin
   update public.invites
     set used_at = now(),
         used_by = auth.uid()
-  where upper(trim(code)) = upper(trim(p_code))
-    and used_at is null
-    and used_by is null;
+  where id = (
+    select id
+    from public.invites
+    where upper(trim(code)) = upper(trim(p_code))
+      and used_at is null
+      and used_by is null
+    limit 1
+  )
+  returning role into v_role;
 
-  return found;
+  return v_role;
 end;
 $$;
 
@@ -131,6 +156,7 @@ create or replace function public.admin_list_invites()
 returns table (
   code text,
   invite_for text,
+  invite_role text,
   created_at timestamptz,
   created_by uuid,
   created_by_username text,
@@ -147,6 +173,7 @@ as $$
   select
     i.code,
     i."for" as invite_for,
+    i.role as invite_role,
     i.created_at,
     i.created_by,
     creator.username as created_by_username,
@@ -163,7 +190,8 @@ $$;
 
 create or replace function public.admin_create_invite(
   p_code text default null,
-  p_for text default null
+  p_for text default null,
+  p_role text default 'member'
 )
 returns text
 language plpgsql
@@ -172,18 +200,24 @@ set search_path = public
 as $$
 declare
   v_code text;
+  v_role text;
 begin
   if not public.is_admin() then
     raise exception 'Nur Admins duerfen Einladungscodes erstellen.';
   end if;
 
   v_code := upper(trim(coalesce(p_code, '')));
+  v_role := trim(coalesce(p_role, 'member'));
   if v_code = '' then
     v_code := 'RAGE-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 10));
   end if;
 
-  insert into public.invites (code, "for", created_at, created_by)
-  values (v_code, nullif(trim(coalesce(p_for, '')), ''), now(), auth.uid());
+  if v_role not in ('observer', 'member', 'admin') then
+    raise exception 'Ungueltige Rollen-Zuordnung fuer Einladungscode.';
+  end if;
+
+  insert into public.invites (code, "for", role, created_at, created_by)
+  values (v_code, nullif(trim(coalesce(p_for, '')), ''), v_role, now(), auth.uid());
 
   return v_code;
 exception
@@ -353,7 +387,7 @@ grant execute on function public.is_admin(uuid) to authenticated;
 grant execute on function public.current_user_role(uuid) to authenticated;
 grant execute on function public.admin_set_homepage_banner(text) to authenticated;
 grant execute on function public.admin_list_invites() to authenticated;
-grant execute on function public.admin_create_invite(text, text) to authenticated;
+grant execute on function public.admin_create_invite(text, text, text) to authenticated;
 grant execute on function public.admin_delete_invite(text) to authenticated;
 grant execute on function public.admin_list_users() to authenticated;
 grant execute on function public.dashboard_list_members() to authenticated;

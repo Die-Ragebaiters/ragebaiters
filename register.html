@@ -151,8 +151,8 @@
       }
 
       // 3) Einladungscode einlösen
-      const { data: ok, error: redErr } = await supabase.rpc('redeem_invite', { p_code: invite });
-      if (redErr || !ok) {
+      const { data: inviteRole, error: redErr } = await supabase.rpc('redeem_invite', { p_code: invite });
+      if (redErr || !inviteRole) {
         // Account existiert jetzt, aber Invite ist falsch -> Account wieder raus
         await supabase.auth.signOut();
         return fail('Einladungscode wurde gerade bereits verwendet. Bitte frage den Teamführer nach einem neuen Code.');
@@ -160,7 +160,7 @@
 
       // 4) Profil anlegen
       const { error: profErr } = await supabase.from('profiles').upsert({
-        id: uid, username: user, role: 'member'
+        id: uid, username: user, role: inviteRole
       }, { onConflict: 'id' });
       if (profErr) return fail('Profil konnte nicht angelegt werden: ' + profErr.message);
 

@@ -31,6 +31,7 @@ const countEl = document.getElementById('count');
 const inviteForm = document.getElementById('inviteForm');
 const inviteCodeInput = document.getElementById('inviteCodeInput');
 const inviteForInput = document.getElementById('inviteForInput');
+const inviteRoleInput = document.getElementById('inviteRoleInput');
 const generateInviteBtn = document.getElementById('generateInviteBtn');
 const createInviteBtn = document.getElementById('createInviteBtn');
 const refreshInvitesBtn = document.getElementById('refreshInvitesBtn');
@@ -190,7 +191,8 @@ function setupAdminActions() {
     event.preventDefault();
     await createInvite({
       code: inviteCodeInput.value.trim(),
-      inviteFor: inviteForInput.value.trim()
+      inviteFor: inviteForInput.value.trim(),
+      inviteRole: inviteRoleInput.value
     });
   });
 
@@ -347,7 +349,7 @@ async function loadMyPhotos() {
   });
 }
 
-async function createInvite({ code, inviteFor }) {
+async function createInvite({ code, inviteFor, inviteRole }) {
   setMessage(inviteMessage, '', 'info', true);
   const normalized = String(code || '')
     .trim()
@@ -360,7 +362,8 @@ async function createInvite({ code, inviteFor }) {
   createInviteBtn.disabled = true;
   const { data, error } = await supabase.rpc('admin_create_invite', {
     p_code: normalized || null,
-    p_for: inviteFor || null
+    p_for: inviteFor || null,
+    p_role: inviteRole || 'member'
   });
   createInviteBtn.disabled = false;
   if (error) {
@@ -374,10 +377,10 @@ async function createInvite({ code, inviteFor }) {
 }
 
 async function loadInvites() {
-  inviteRows.innerHTML = '<tr><td colspan="7" class="table-empty">Einladungscodes werden geladen...</td></tr>';
+  inviteRows.innerHTML = '<tr><td colspan="8" class="table-empty">Einladungscodes werden geladen...</td></tr>';
   const { data, error } = await supabase.rpc('admin_list_invites');
   if (error) {
-    inviteRows.innerHTML = `<tr><td colspan="7" class="table-empty">Fehler: ${escapeHtml(error.message)}</td></tr>`;
+    inviteRows.innerHTML = `<tr><td colspan="8" class="table-empty">Fehler: ${escapeHtml(error.message)}</td></tr>`;
     setMessage(inviteMessage, `Invite-Liste konnte nicht geladen werden: ${error.message}`, 'error');
     return;
   }
@@ -389,7 +392,7 @@ async function loadInvites() {
   inviteTotalCount.textContent = String(invites.length);
 
   if (!invites.length) {
-    inviteRows.innerHTML = '<tr><td colspan="7" class="table-empty">Noch keine Einladungscodes vorhanden.</td></tr>';
+    inviteRows.innerHTML = '<tr><td colspan="8" class="table-empty">Noch keine Einladungscodes vorhanden.</td></tr>';
     return;
   }
 
@@ -397,6 +400,7 @@ async function loadInvites() {
     <tr>
       <td><code>${escapeHtml(invite.code)}</code></td>
       <td>${escapeHtml(invite.invite_for || '-')}</td>
+      <td><span class="status-pill role-${normalizeRole(invite.invite_role)}">${roleLabel(invite.invite_role)}</span></td>
       <td><span class="status-pill ${invite.is_used ? 'used' : 'open'}">${invite.is_used ? 'Genutzt' : 'Offen'}</span></td>
       <td>${formatDateTime(invite.created_at)}</td>
       <td>${escapeHtml(invite.used_by_username || '-')}</td>

@@ -173,6 +173,16 @@
                     <input type="text" id="inviteForInput" maxlength="120" placeholder="z.B. Max / neues Teammitglied">
                   </label>
                 </div>
+                <div class="form-row">
+                  <label class="field">
+                    <span>Rolle nach Registrierung</span>
+                    <select id="inviteRoleInput">
+                      <option value="observer">Beobachter</option>
+                      <option value="member" selected>Mitglied</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </label>
+                </div>
                 <div class="form-actions">
                   <button type="button" class="btn-secondary" id="generateInviteBtn">Code generieren</button>
                   <button type="submit" class="btn-primary" id="createInviteBtn">Code erstellen</button>
@@ -188,6 +198,7 @@
                     <tr>
                       <th>Code</th>
                       <th>Gedacht fuer</th>
+                      <th>Rolle</th>
                       <th>Status</th>
                       <th>Erstellt</th>
                       <th>Genutzt von</th>
@@ -197,7 +208,7 @@
                   </thead>
                   <tbody id="inviteRows">
                     <tr>
-                      <td colspan="7" class="table-empty">Noch keine Einladungscodes geladen.</td>
+                      <td colspan="8" class="table-empty">Noch keine Einladungscodes geladen.</td>
                     </tr>
                   </tbody>
                 </table>
