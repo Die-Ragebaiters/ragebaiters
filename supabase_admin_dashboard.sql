@@ -8,6 +8,7 @@ drop function if exists public.admin_create_invite(text, text);
 drop function if exists public.admin_create_invite(text, text, text);
 drop function if exists public.dashboard_list_members();
 drop function if exists public.redeem_invite(text);
+drop view if exists public.photos_public;
 drop function if exists public.list_gallery_photos(boolean);
 drop function if exists public.get_latest_gallery_photo(boolean);
 
