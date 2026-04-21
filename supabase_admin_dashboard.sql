@@ -1,6 +1,10 @@
 -- Ragebaiters Admin Dashboard / Supabase Setup
 -- Diese Datei im Supabase SQL Editor ausfuehren.
 
+drop function if exists public.admin_list_invites();
+drop function if exists public.admin_create_invite(text);
+drop function if exists public.admin_create_invite(text, text);
+
 create table if not exists public.site_settings (
   key text primary key,
   value_text text not null,
