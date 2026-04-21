@@ -16,7 +16,10 @@ const roleBadge = document.getElementById('roleBadge');
 const memberNote = document.getElementById('memberNote');
 const tabButtons = [...document.querySelectorAll('.dashboard-tab')];
 const viewSections = [...document.querySelectorAll('.dashboard-view')];
-const adminOnlyNodes = [...document.querySelectorAll('.admin-only, .admin-view')];
+const adminOnlyNodes = [...document.querySelectorAll('.role-admin-only, .role-admin-view')];
+const memberUpNodes = [...document.querySelectorAll('.role-member-up, .role-member-up-view')];
+const welcomeIntro = document.getElementById('welcomeIntro');
+const welcomeCapabilities = document.getElementById('welcomeCapabilities');
 
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('fileInput');
@@ -43,13 +46,19 @@ const saveBannerBtn = document.getElementById('saveBannerBtn');
 const bannerMessage = document.getElementById('bannerMessage');
 
 const refreshUsersBtn = document.getElementById('refreshUsersBtn');
+const usersTitle = document.getElementById('usersTitle');
+const usersIntro = document.getElementById('usersIntro');
+const userTableHead = document.getElementById('userTableHead');
 const userRows = document.getElementById('userRows');
 const userMessage = document.getElementById('userMessage');
 
 const state = {
   user: null,
   profile: null,
-  isAdmin: false
+  role: 'observer',
+  isAdmin: false,
+  canUpload: false,
+  canViewUsers: false
 };
 
 state.user = await getSessionUser();
@@ -63,36 +72,55 @@ if (!state.profile) {
   state.profile = await ensureProfile(state.user);
 }
 
-state.isAdmin = state.profile?.role === 'admin';
+state.role = normalizeRole(state.profile?.role);
+state.isAdmin = state.role === 'admin';
+state.canUpload = state.role === 'member' || state.role === 'admin';
+state.canViewUsers = state.role === 'member' || state.role === 'admin';
 helloEl.textContent = state.profile?.username || state.user.email || 'Mitglied';
-roleBadge.textContent = state.isAdmin ? 'Admin' : 'Mitglied';
+roleBadge.textContent = roleLabel(state.role);
 if (!state.isAdmin) {
   memberNote.hidden = false;
   adminOnlyNodes.forEach(node => {
     node.hidden = true;
   });
 }
+if (!state.canUpload && !state.canViewUsers) {
+  memberUpNodes.forEach(node => {
+    node.hidden = true;
+  });
+}
+
+setupWelcome();
+setupUserSectionCopy();
 
 setupNavigation();
-setupUploads();
+if (state.canUpload) setupUploads();
+if (state.canViewUsers) {
+  refreshUsersBtn.addEventListener('click', () => loadUsers());
+}
 setupAdminActions();
 
 loadingSection.hidden = true;
 mainSection.hidden = false;
 
-await loadMyPhotos();
+if (state.canUpload) {
+  await loadMyPhotos();
+}
+if (state.canViewUsers) {
+  await loadUsers();
+}
 if (state.isAdmin) {
   await Promise.all([
     loadInvites(),
-    loadBannerSetting(),
-    loadUsers()
+    loadBannerSetting()
   ]);
 }
 
 function setupNavigation() {
   tabButtons.forEach(btn => {
     btn.addEventListener('click', () => {
-      if (btn.classList.contains('admin-only') && !state.isAdmin) return;
+      if (btn.classList.contains('role-admin-only') && !state.isAdmin) return;
+      if (btn.classList.contains('role-member-up') && !state.canUpload && !state.canViewUsers) return;
       setActiveView(btn.dataset.view);
     });
   });
@@ -103,9 +131,11 @@ function setupNavigation() {
 }
 
 function normalizeView(view) {
-  const allowed = ['uploads'];
-  if (state.isAdmin) allowed.push('invites', 'banner', 'users');
-  return allowed.includes(view) ? view : 'uploads';
+  const allowed = ['welcome'];
+  if (state.canUpload) allowed.push('uploads');
+  if (state.canViewUsers) allowed.push('users');
+  if (state.isAdmin) allowed.push('invites', 'banner');
+  return allowed.includes(view) ? view : 'welcome';
 }
 
 function setActiveView(view) {
@@ -171,7 +201,36 @@ function setupAdminActions() {
   });
   saveBannerBtn.addEventListener('click', () => saveBannerSetting());
 
-  refreshUsersBtn.addEventListener('click', () => loadUsers());
+}
+
+function setupWelcome() {
+  const introByRole = {
+    observer: 'Du bist als Beobachter eingeloggt. Aktuell steht dir nur dieser Willkommensbereich zur Verfuegung.',
+    member: 'Du bist als Mitglied eingeloggt. Du kannst Bilder hochladen und die Mitgliederliste ansehen.',
+    admin: 'Du bist als Admin eingeloggt. Alle Bereiche des Dashboards stehen dir vollstaendig zur Verfuegung.'
+  };
+
+  welcomeIntro.textContent = introByRole[state.role] || introByRole.observer;
+
+  const cards = [
+    capabilityCard('Willkommensbereich', 'Immer sichtbar', 'Deine aktuelle Rolle und deine freigeschalteten Bereiche.'),
+    capabilityCard('Uploads', state.canUpload ? 'Freigeschaltet' : 'Gesperrt', state.canUpload ? 'Bilder hochladen und eigene Uploads verwalten.' : 'Nur fuer Mitglieder und Admins freigeschaltet.'),
+    capabilityCard('Mitglieder', state.canViewUsers ? 'Freigeschaltet' : 'Gesperrt', state.canViewUsers ? (state.isAdmin ? 'Alle Benutzer sehen und verwalten.' : 'Mitgliederliste in reiner Lesesicht.') : 'Nur fuer Mitglieder und Admins freigeschaltet.'),
+    capabilityCard('Admin-Funktionen', state.isAdmin ? 'Freigeschaltet' : 'Gesperrt', state.isAdmin ? 'Einladungscodes, Banner und Benutzerverwaltung komplett verfuegbar.' : 'Nur fuer Admins sichtbar.')
+  ];
+
+  welcomeCapabilities.innerHTML = cards.join('');
+}
+
+function setupUserSectionCopy() {
+  if (state.isAdmin) {
+    usersTitle.textContent = 'Benutzerverwaltung';
+    usersIntro.textContent = 'Alle Benutzer ansehen, Rollen anpassen, Benutzernamen aendern und Accounts loeschen.';
+    return;
+  }
+
+  usersTitle.textContent = 'Mitglieder';
+  usersIntro.textContent = 'Hier kannst du alle Benutzer der Website ansehen. Bearbeiten ist fuer Mitglieder nicht moeglich.';
 }
 
 function handleUploadFiles(files) {
@@ -257,6 +316,9 @@ async function loadMyPhotos() {
     const { data: pub } = supabase.storage.from('photos').getPublicUrl(photo.storage_path);
     const fig = document.createElement('figure');
     fig.className = 'photo-item';
+    const actions = state.isAdmin
+      ? `<button class="btn-delete" type="button" data-id="${photo.id}" data-path="${encodeURIComponent(photo.storage_path)}" title="Loeschen">x</button>`
+      : '';
     fig.innerHTML = `
       <a href="${pub.publicUrl}" target="_blank" rel="noopener">
         <img src="${pub.publicUrl}" alt="${escapeHtml(photo.title || '')}" loading="lazy">
@@ -266,7 +328,7 @@ async function loadMyPhotos() {
           <span>${escapeHtml(photo.title || '')}</span>
           ${photo.caption ? `<small>${escapeHtml(photo.caption)}</small>` : ''}
         </div>
-        <button class="btn-delete" type="button" data-id="${photo.id}" data-path="${encodeURIComponent(photo.storage_path)}" title="Loeschen">x</button>
+        ${actions}
       </figcaption>`;
     grid.appendChild(fig);
   }
@@ -405,17 +467,53 @@ function updateBannerPreview(variant) {
 }
 
 async function loadUsers() {
-  userRows.innerHTML = '<tr><td colspan="6" class="table-empty">Benutzer werden geladen...</td></tr>';
-  const { data, error } = await supabase.rpc('admin_list_users');
+  if (!state.canViewUsers) return;
+
+  if (state.isAdmin) {
+    userTableHead.innerHTML = `
+      <tr>
+        <th>Benutzer</th>
+        <th>E-Mail</th>
+        <th>Rolle</th>
+        <th>Erstellt</th>
+        <th>Letzter Login</th>
+        <th>Aktionen</th>
+      </tr>`;
+    userRows.innerHTML = '<tr><td colspan="6" class="table-empty">Benutzer werden geladen...</td></tr>';
+  } else {
+    userTableHead.innerHTML = `
+      <tr>
+        <th>Benutzer</th>
+        <th>Rolle</th>
+        <th>Mitglied seit</th>
+      </tr>`;
+    userRows.innerHTML = '<tr><td colspan="3" class="table-empty">Mitglieder werden geladen...</td></tr>';
+  }
+
+  const rpcName = state.isAdmin ? 'admin_list_users' : 'dashboard_list_members';
+  const { data, error } = await supabase.rpc(rpcName);
   if (error) {
-    userRows.innerHTML = `<tr><td colspan="6" class="table-empty">Fehler: ${escapeHtml(error.message)}</td></tr>`;
+    const colspan = state.isAdmin ? 6 : 3;
+    userRows.innerHTML = `<tr><td colspan="${colspan}" class="table-empty">Fehler: ${escapeHtml(error.message)}</td></tr>`;
     setMessage(userMessage, `Benutzer konnten nicht geladen werden: ${error.message}`, 'error');
     return;
   }
 
   const users = data || [];
   if (!users.length) {
-    userRows.innerHTML = '<tr><td colspan="6" class="table-empty">Keine Benutzer gefunden.</td></tr>';
+    const colspan = state.isAdmin ? 6 : 3;
+    userRows.innerHTML = `<tr><td colspan="${colspan}" class="table-empty">Keine Benutzer gefunden.</td></tr>`;
+    return;
+  }
+
+  if (!state.isAdmin) {
+    userRows.innerHTML = users.map(entry => `
+      <tr>
+        <td>${escapeHtml(entry.username || 'Unbekannt')}</td>
+        <td><span class="status-pill role-${normalizeRole(entry.role)}">${roleLabel(entry.role)}</span></td>
+        <td>${formatDateTime(entry.created_at)}</td>
+      </tr>`).join('');
+    setMessage(userMessage, '', 'info', true);
     return;
   }
 
@@ -432,6 +530,7 @@ async function loadUsers() {
         <label class="inline-field">
           <span>Rolle</span>
           <select data-field="role">
+            <option value="observer" ${entry.role === 'observer' ? 'selected' : ''}>observer</option>
             <option value="member" ${entry.role === 'member' ? 'selected' : ''}>member</option>
             <option value="admin" ${entry.role === 'admin' ? 'selected' : ''}>admin</option>
           </select>
@@ -529,6 +628,29 @@ function setMessage(el, text, type = 'info', hidden = false) {
   el.hidden = false;
   el.textContent = text;
   el.className = `admin-message is-${type}`;
+}
+
+function normalizeRole(role) {
+  const allowed = ['observer', 'member', 'admin'];
+  return allowed.includes(role) ? role : 'observer';
+}
+
+function roleLabel(role) {
+  const labels = {
+    observer: 'Beobachter',
+    member: 'Mitglied',
+    admin: 'Admin'
+  };
+  return labels[normalizeRole(role)] || 'Beobachter';
+}
+
+function capabilityCard(title, stateLabel, copy) {
+  return `
+    <article class="card capability-card">
+      <span>${escapeHtml(title)}</span>
+      <strong>${escapeHtml(stateLabel)}</strong>
+      <p>${escapeHtml(copy)}</p>
+    </article>`;
 }
 
 function formatDateTime(value) {

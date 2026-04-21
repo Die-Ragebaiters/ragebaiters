@@ -4,6 +4,7 @@
 drop function if exists public.admin_list_invites();
 drop function if exists public.admin_create_invite(text);
 drop function if exists public.admin_create_invite(text, text);
+drop function if exists public.dashboard_list_members();
 
 create table if not exists public.site_settings (
   key text primary key,
@@ -71,6 +72,19 @@ as $$
     from public.profiles
     where id = coalesce(p_user_id, auth.uid())
       and role = 'admin'
+  );
+$$;
+
+create or replace function public.current_user_role(p_user_id uuid default auth.uid())
+returns text
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select coalesce(
+    (select role from public.profiles where id = coalesce(p_user_id, auth.uid())),
+    'observer'
   );
 $$;
 
@@ -214,13 +228,34 @@ as $$
     u.id,
     u.email::text,
     p.username,
-    coalesce(p.role, 'member') as role,
+    coalesce(p.role, 'observer') as role,
     u.created_at,
     u.last_sign_in_at
   from auth.users u
   left join public.profiles p on p.id = u.id
   where public.is_admin()
   order by u.created_at desc;
+$$;
+
+create or replace function public.dashboard_list_members()
+returns table (
+  username text,
+  role text,
+  created_at timestamptz
+)
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select
+    coalesce(p.username, split_part(u.email::text, '@', 1)) as username,
+    coalesce(p.role, 'observer') as role,
+    u.created_at
+  from auth.users u
+  left join public.profiles p on p.id = u.id
+  where public.current_user_role() in ('member', 'admin')
+  order by coalesce(p.username, split_part(u.email::text, '@', 1)) asc;
 $$;
 
 create or replace function public.admin_update_user(
@@ -256,7 +291,7 @@ begin
     raise exception 'Der Benutzername enthaelt ungueltige Zeichen.';
   end if;
 
-  if v_role not in ('member', 'admin') then
+  if v_role not in ('observer', 'member', 'admin') then
     raise exception 'Ungueltige Rolle.';
   end if;
 
@@ -315,10 +350,12 @@ grant execute on function public.get_homepage_banner() to anon, authenticated;
 grant execute on function public.check_invite_code(text) to anon, authenticated;
 grant execute on function public.redeem_invite(text) to authenticated;
 grant execute on function public.is_admin(uuid) to authenticated;
+grant execute on function public.current_user_role(uuid) to authenticated;
 grant execute on function public.admin_set_homepage_banner(text) to authenticated;
 grant execute on function public.admin_list_invites() to authenticated;
 grant execute on function public.admin_create_invite(text, text) to authenticated;
 grant execute on function public.admin_delete_invite(text) to authenticated;
 grant execute on function public.admin_list_users() to authenticated;
+grant execute on function public.dashboard_list_members() to authenticated;
 grant execute on function public.admin_update_user(uuid, text, text) to authenticated;
 grant execute on function public.admin_delete_user(uuid) to authenticated;

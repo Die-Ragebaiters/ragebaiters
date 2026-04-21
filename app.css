@@ -649,6 +649,24 @@
   border: 1px solid rgba(255,170,0,0.24);
 }
 
+.status-pill.role-observer {
+  color: #9fd3ff;
+  background: rgba(60,150,255,0.12);
+  border: 1px solid rgba(60,150,255,0.24);
+}
+
+.status-pill.role-member {
+  color: var(--accent);
+  background: rgba(183,255,60,0.12);
+  border: 1px solid rgba(183,255,60,0.25);
+}
+
+.status-pill.role-admin {
+  color: #ffd38a;
+  background: rgba(255,170,0,0.12);
+  border: 1px solid rgba(255,170,0,0.24);
+}
+
 .admin-message {
   margin-top: 16px;
   padding: 12px 14px;
@@ -671,6 +689,35 @@
 
 .admin-message.is-info {
   color: var(--text);
+}
+
+.welcome-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.capability-card {
+  padding: 20px;
+}
+
+.capability-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+
+.capability-card strong {
+  display: block;
+  font-size: 1.2rem;
+  margin-bottom: 8px;
+}
+
+.capability-card p {
+  margin: 0;
+  color: var(--muted);
 }
 
 .banner-settings-grid {
@@ -783,6 +830,10 @@
 
   .stats-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .welcome-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .banner-settings-grid {

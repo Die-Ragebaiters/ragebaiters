@@ -57,18 +57,31 @@
         <aside class="dashboard-sidebar card">
           <div class="dashboard-sidebar-title">Bereiche</div>
           <div class="dashboard-tabs" id="dashboardTabs">
-            <button type="button" class="dashboard-tab is-active" data-view="uploads">Uploads</button>
-            <button type="button" class="dashboard-tab admin-only" data-view="invites">Einladungscodes</button>
-            <button type="button" class="dashboard-tab admin-only" data-view="banner">Startseiten-Banner</button>
-            <button type="button" class="dashboard-tab admin-only" data-view="users">Benutzerverwaltung</button>
+            <button type="button" class="dashboard-tab is-active" data-view="welcome">Willkommen</button>
+            <button type="button" class="dashboard-tab role-member-up" data-view="uploads">Uploads</button>
+            <button type="button" class="dashboard-tab role-member-up" data-view="users">Mitglieder</button>
+            <button type="button" class="dashboard-tab role-admin-only" data-view="invites">Einladungscodes</button>
+            <button type="button" class="dashboard-tab role-admin-only" data-view="banner">Startseiten-Banner</button>
           </div>
           <div class="dashboard-sidebar-note" id="memberNote" hidden>
-            Du bist als Mitglied eingeloggt. Admin-Bereiche werden nur für Team-Admins freigeschaltet.
+            Dein Zugriff richtet sich nach deiner Rolle. Admin-Funktionen bleiben nur fuer Team-Admins sichtbar.
           </div>
         </aside>
 
         <div class="dashboard-content">
-          <section class="dashboard-view is-active" id="view-uploads">
+          <section class="dashboard-view is-active" id="view-welcome">
+            <div class="card admin-card welcome-card">
+              <div class="panel-head compact">
+                <div>
+                  <h3>Willkommensbereich</h3>
+                  <p id="welcomeIntro">Hier siehst du deine Rolle und welche Bereiche dir aktuell freigeschaltet sind.</p>
+                </div>
+              </div>
+              <div class="welcome-grid" id="welcomeCapabilities"></div>
+            </div>
+          </section>
+
+          <section class="dashboard-view role-member-up-view" id="view-uploads" hidden>
             <div class="panel-head">
               <div>
                 <h3>Uploads & Mediathek</h3>
@@ -112,13 +125,13 @@
             <div class="panel-head panel-head-spaced">
               <div>
                 <h3>Meine Fotos (<span id="count">0</span>)</h3>
-                <p>Hier kannst du deine bereits hochgeladenen Bilder einsehen und loeschen.</p>
+                <p>Hier siehst du deine bereits hochgeladenen Bilder.</p>
               </div>
             </div>
             <div id="myPhotos"></div>
           </section>
 
-          <section class="dashboard-view admin-view" id="view-invites" hidden>
+          <section class="dashboard-view role-admin-view" id="view-invites" hidden>
             <div class="panel-head">
               <div>
                 <h3>Einladungscodes</h3>
@@ -192,7 +205,7 @@
             </div>
           </section>
 
-          <section class="dashboard-view admin-view" id="view-banner" hidden>
+          <section class="dashboard-view role-admin-view" id="view-banner" hidden>
             <div class="panel-head">
               <div>
                 <h3>Startseiten-Banner</h3>
@@ -235,11 +248,11 @@
             </div>
           </section>
 
-          <section class="dashboard-view admin-view" id="view-users" hidden>
+          <section class="dashboard-view role-member-up-view" id="view-users" hidden>
             <div class="panel-head">
               <div>
-                <h3>Benutzerverwaltung</h3>
-                <p>Alle Benutzer ansehen, Rollen anpassen, Benutzernamen aendern und Accounts loeschen.</p>
+                <h3 id="usersTitle">Mitglieder</h3>
+                <p id="usersIntro">Hier siehst du alle Benutzer der Website.</p>
               </div>
               <button type="button" class="btn-secondary" id="refreshUsersBtn">Aktualisieren</button>
             </div>
@@ -247,7 +260,7 @@
             <div class="card admin-card">
               <div class="table-wrap">
                 <table class="data-table">
-                  <thead>
+                  <thead id="userTableHead">
                     <tr>
                       <th>Benutzer</th>
                       <th>E-Mail</th>
