@@ -561,26 +561,9 @@ language plpgsql
 security definer
 set search_path = public
 as $$
-declare
-  v_storage_path text;
 begin
   if not public.is_admin() then
     raise exception 'Nur Admins duerfen Uploads loeschen.';
-  end if;
-
-  select storage_path
-  into v_storage_path
-  from public.photos
-  where id = p_photo_id;
-
-  if v_storage_path is null then
-    return false;
-  end if;
-
-  if v_storage_path not like '__local__/%' then
-    delete from storage.objects
-    where bucket_id = 'photos'
-      and name = v_storage_path;
   end if;
 
   delete from public.photos

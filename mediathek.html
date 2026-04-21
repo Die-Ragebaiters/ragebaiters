@@ -109,8 +109,13 @@
             event.stopPropagation();
             const fig = btn.closest('.photo-item');
             const photoId = Number(fig?.dataset.id);
+            const photoPath = fig?.dataset.path || '';
             if (!photoId) return;
             if (!confirm('Dieses Bild wirklich aus der Mediathek loeschen?')) return;
+            if (photoPath && !String(photoPath).startsWith('__local__/')) {
+              const { error: storageError } = await supabase.storage.from('photos').remove([photoPath]);
+              if (storageError) return alert(storageError.message);
+            }
             const { data: deleted, error: deleteError } = await supabase.rpc('admin_delete_photo', {
               p_photo_id: photoId
             });
