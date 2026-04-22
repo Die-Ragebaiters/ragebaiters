@@ -262,9 +262,10 @@ async function openTestAccountSession() {
     );
   } catch (error) {
     if (pendingTab && !pendingTab.closed) pendingTab.close();
+    const message = mapTestAccountError(error);
     setMessage(
       testAccountMessage,
-      `Testaccount konnte nicht geoeffnet werden: ${error.message || error}`,
+      `Testaccount konnte nicht geoeffnet werden: ${message}`,
       'error'
     );
   }
@@ -972,6 +973,20 @@ function createTestAccountHandoffId() {
   const bytes = new Uint8Array(12);
   crypto.getRandomValues(bytes);
   return [...bytes].map(value => value.toString(16).padStart(2, '0')).join('');
+}
+
+function mapTestAccountError(error) {
+  const message = String(error?.message || error || '');
+
+  if (/admin_get_test_account_access/i.test(message) && /schema cache/i.test(message)) {
+    return 'Die neue Supabase-Funktion fehlt noch. Bitte die aktuelle supabase_admin_dashboard.sql einmal komplett im Supabase SQL Editor ausfuehren.';
+  }
+
+  if (/admin_prepare_test_account/i.test(message) && /schema cache/i.test(message)) {
+    return 'Die Testaccount-Vorbereitung fehlt noch in Supabase. Bitte die aktuelle supabase_admin_dashboard.sql einmal komplett ausfuehren.';
+  }
+
+  return message || 'Unbekannter Fehler';
 }
 
 function escapeHtml(value) {
