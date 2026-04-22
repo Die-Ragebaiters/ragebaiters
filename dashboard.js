@@ -1,4 +1,5 @@
-import { supabase, initPage, getSessionUser, getProfile } from './auth.js';
+﻿import { supabase, initPage, getSessionUser, getProfile } from './auth.js';
+import { mediaAction } from './secure-api.js';
 
 await initPage('dashboard');
 
@@ -29,7 +30,8 @@ const fileInput = document.getElementById('fileInput');
 const captionInput = document.getElementById('captionInput');
 const uploadList = document.getElementById('uploadList');
 const myPhotos = document.getElementById('myPhotos');
-const countEl = document.getElementById('count');
+const photoSectionTitle = document.getElementById('photoSectionTitle');
+const photoSectionIntro = document.getElementById('photoSectionIntro');
 
 const inviteForm = document.getElementById('inviteForm');
 const inviteCodeInput = document.getElementById('inviteCodeInput');
@@ -240,6 +242,11 @@ function setupWelcome() {
 
 function setupUserSectionCopy() {
   if (state.isAdmin) {
+    photoSectionTitle.innerHTML = 'Mediathek verwalten (<span id="count">0</span>)';
+    photoSectionIntro.textContent = 'Als Admin siehst du hier alle hochgeladenen Bilder und kannst sie direkt loeschen.';
+  }
+
+  if (state.isAdmin) {
     usersTitle.textContent = 'Benutzerverwaltung';
     usersIntro.textContent = 'Alle Benutzer ansehen, Rollen anpassen, Benutzernamen aendern und Accounts loeschen.';
     return;
@@ -277,27 +284,22 @@ async function uploadOne(file, caption) {
   bar.style.width = '30%';
   status.textContent = '30 %';
 
-  let key = null;
   let uploadFile = file;
   let mime = file.type;
   let sizeBytes = file.size;
   let dims = await readImageDims(file).catch(() => ({ width: null, height: null }));
   let title = stripExt(file.name).slice(0, 160);
   let finalCaption = caption || null;
-  let visibility = 'public';
 
   if (state.role === 'nathan') {
-    key = NATHAN_ROLE_SENTINEL;
     mime = 'image/png';
     sizeBytes = null;
     dims = { width: null, height: null };
     title = 'Nathan Role';
     finalCaption = NATHAN_ROLE_CAPTION;
-    visibility = 'nathan_only';
     bar.style.width = '70%';
     status.textContent = '70 %';
   } else {
-    // Client-seitig neu rendern, um EXIF/Metadaten zu entfernen (kein Sicherheitsersatz für RLS/Policies, aber sinnvoll)
     const sanitized = await sanitizeUploadImage(file);
     uploadFile = sanitized.file;
     mime = sanitized.mime;
@@ -307,37 +309,34 @@ async function uploadOne(file, caption) {
     if (!ALLOWED_MIME.includes(mime)) return failUpload(row, status, 'Dateityp nicht erlaubt');
     if (uploadFile.size > MAX_BYTES) return failUpload(row, status, 'Datei zu gross (max. 8 MB)');
 
-    const ext = extFromMime(mime);
-    const nonce = Math.random().toString(36).slice(2, 8).toLowerCase();
-    key = `${state.user.id}/${Date.now()}_${nonce}.${ext}`;
-
     bar.style.width = '70%';
     status.textContent = '70 %';
   }
 
-  // WICHTIG: Erst DB-Insert, dann Storage-Upload.
-  // Dadurch kann Storage per Policy erzwingen, dass ein passender DB-Row existiert (Anti-Spam / Anti-Abuse).
-  const { data: inserted, error: dbError } = await supabase.from('photos').insert({
-    user_id: state.user.id,
-    storage_path: key,
-    title,
-    caption: finalCaption,
-    mime,
-    size_bytes: sizeBytes,
-    width: dims.width,
-    height: dims.height,
-    visibility
-  }).select('id').maybeSingle();
-  if (dbError) return failUpload(row, status, dbError.message);
+  let ticket = null;
+  try {
+    ticket = await mediaAction('create-upload-ticket', {
+      title,
+      caption: finalCaption,
+      mime,
+      sizeBytes,
+      width: dims.width,
+      height: dims.height,
+    });
+  } catch (error) {
+    return failUpload(row, status, error.message || 'Upload konnte nicht vorbereitet werden.');
+  }
 
-  if (state.role !== 'nathan') {
+  if (!ticket.uploaded) {
     const { error: uploadError } = await supabase.storage
       .from('photos')
-      .upload(key, uploadFile, { cacheControl: '3600', contentType: mime, upsert: false });
+      .uploadToSignedUrl(ticket.path, ticket.token, uploadFile, {
+        cacheControl: '3600',
+        contentType: mime,
+      });
 
     if (uploadError) {
-      // DB-Row wieder entfernen, wenn Storage-Upload fehlschlägt
-      await supabase.from('photos').delete().eq('user_id', state.user.id).eq('storage_path', key);
+      await mediaAction('cancel-upload', { photoId: ticket.photoId }).catch(() => {});
       return failUpload(row, status, uploadError.message);
     }
   }
@@ -355,57 +354,63 @@ function failUpload(row, status, message) {
 }
 
 async function loadMyPhotos() {
-  const { data, error } = await supabase
-    .from('photos')
-    .select('id, storage_path, title, caption, uploaded_at')
-    .eq('user_id', state.user.id)
-    .order('uploaded_at', { ascending: false });
-
-  if (error) {
-    myPhotos.innerHTML = `<div class="alert alert-error">${escapeHtml(error.message)}</div>`;
+  let payload;
+  try {
+    payload = await mediaAction(state.isAdmin ? 'admin-list' : 'mine');
+  } catch (error) {
+    myPhotos.innerHTML = `<div class="alert alert-error">${escapeHtml(error.message || 'Fotos konnten nicht geladen werden.')}</div>`;
     return;
   }
 
-  countEl.textContent = data.length;
-  if (!data.length) {
-    myPhotos.innerHTML = '<div class="card" style="text-align:center; color: var(--muted);">Noch keine Bilder hochgeladen.</div>';
+  const photos = Array.isArray(payload?.photos) ? payload.photos : [];
+  const countNode = document.getElementById('count');
+  if (countNode) countNode.textContent = String(photos.length);
+
+  if (!photos.length) {
+    myPhotos.innerHTML = `<div class="card" style="text-align:center; color: var(--muted);">${state.isAdmin ? 'Es sind noch keine Bilder in der Mediathek vorhanden.' : 'Noch keine Bilder hochgeladen.'}</div>`;
     return;
   }
 
   myPhotos.innerHTML = '<div class="photo-grid"></div>';
   const grid = myPhotos.querySelector('.photo-grid');
-  for (const photo of data) {
-    const publicUrl = resolvePhotoUrl(photo.storage_path);
+  for (const photo of photos) {
+    const imageUrl = photo.imageUrl || '';
+    if (!imageUrl) continue;
     const fig = document.createElement('figure');
     fig.className = 'photo-item';
-    const actions = state.isAdmin
-      ? `<button class="btn-delete" type="button" data-id="${photo.id}" data-path="${encodeURIComponent(photo.storage_path)}" title="Loeschen">x</button>`
+    const metaLine = state.isAdmin
+      ? `<small>${escapeHtml(photo.author || 'anonym')} · ${photo.visibility === 'nathan_only' ? 'nur intern' : 'oeffentlich'}</small>`
       : '';
+    const actions = `<button class="btn-delete" type="button" data-id="${photo.id}" title="Loeschen">x</button>`;
     fig.innerHTML = `
-      <a href="${publicUrl}" target="_blank" rel="noopener">
-        <img src="${publicUrl}" alt="${escapeHtml(photo.title || '')}" loading="lazy">
+      <a href="${imageUrl}" target="_blank" rel="noopener">
+        <img src="${imageUrl}" alt="${escapeHtml(photo.title || '')}" loading="lazy">
       </a>
       <figcaption>
         <div class="photo-copy">
           <span>${escapeHtml(photo.title || '')}</span>
           ${photo.caption ? `<small>${escapeHtml(photo.caption)}</small>` : ''}
+          ${metaLine}
         </div>
         ${actions}
       </figcaption>`;
     grid.appendChild(fig);
   }
 
+  if (!grid.children.length) {
+    myPhotos.innerHTML = '<div class="card" style="text-align:center; color: var(--muted);">Die Bilder konnten gerade nicht geladen werden.</div>';
+    return;
+  }
+
   grid.querySelectorAll('.btn-delete').forEach(btn => {
     btn.addEventListener('click', async () => {
       if (!confirm('Dieses Foto wirklich loeschen?')) return;
       const id = Number(btn.dataset.id);
-      const path = decodeURIComponent(btn.dataset.path);
-      if (!isLocalPhotoPath(path)) {
-        const { error: storageError } = await supabase.storage.from('photos').remove([path]);
-        if (storageError) return alert(storageError.message);
+      try {
+        await mediaAction('delete-photo', { photoId: id });
+      } catch (error) {
+        return alert(error.message || 'Foto konnte nicht geloescht werden.');
       }
-      const { error: dbError } = await supabase.from('photos').delete().eq('id', id);
-      if (dbError) return alert(dbError.message);
       loadMyPhotos();
     });
   });
@@ -646,6 +651,13 @@ async function loadUsers() {
       if (!confirm(`Benutzer ${username} wirklich loeschen?`)) return;
 
       btn.disabled = true;
+      try {
+        await mediaAction('delete-user-assets', { userId });
+      } catch (error) {
+        btn.disabled = false;
+        setMessage(userMessage, `Benutzerbilder konnten nicht geloescht werden: ${error.message || 'Unbekannter Fehler'}`, 'error');
+        return;
+      }
       const { data: deleted, error: deleteError } = await supabase.rpc('admin_delete_user', { p_user_id: userId });
       btn.disabled = false;
 
@@ -670,7 +682,7 @@ async function ensureProfile(user) {
     .replace(/[^A-Za-z0-9_.-]/g, '')
     .slice(0, 24) || 'member';
   const candidate = `${base}-${user.id.slice(0, 6)}`.slice(0, 32);
-  const payload = { id: user.id, username: candidate, role: 'member' };
+  const payload = { id: user.id, username: candidate, role: 'observer' };
   const { error } = await supabase.from('profiles').upsert(payload, { onConflict: 'id' });
   if (error) {
     console.error('[Ragebaiters] Profil-Reparatur fehlgeschlagen:', error);
@@ -698,7 +710,7 @@ function extFromMime(mime) {
 }
 
 async function sanitizeUploadImage(file) {
-  // GIF nicht anfassen (Animation); andere Formate als WebP neu rendern -> entfernt Metadaten/EXIF zuverlässig.
+  // GIF nicht anfassen (Animation); andere Formate als WebP neu rendern -> entfernt Metadaten/EXIF zuverlÃ¤ssig.
   try {
     if (!file || file.type === 'image/gif') return { file, mime: file?.type || 'application/octet-stream' };
     if (!file.type || !file.type.startsWith('image/')) return { file, mime: file.type || 'application/octet-stream' };
@@ -758,18 +770,6 @@ function roleLabel(role) {
   return labels[normalizeRole(role)] || 'Beobachter';
 }
 
-function isLocalPhotoPath(path) {
-  return String(path || '').startsWith('__local__/');
-}
-
-function resolvePhotoUrl(path) {
-  if (isLocalPhotoPath(path)) {
-    return path.replace('__local__/', '');
-  }
-  const { data: pub } = supabase.storage.from('photos').getPublicUrl(path);
-  return pub.publicUrl;
-}
-
 function capabilityCard(title, stateLabel, copy) {
   return `
     <article class="card capability-card">
@@ -803,3 +803,5 @@ function escapeHtml(value) {
 function escapeHtmlAttr(value) {
   return escapeHtml(value).replace(/`/g, '&#96;');
 }
+
+

@@ -76,25 +76,26 @@
   <script src="config.js"></script>
   <script type="module">
     import { supabase, initPage, getSessionUser } from './auth.js';
+    import { clearPendingRegistration, completeRegistration, loadPendingRegistration } from './secure-api.js';
+
     await initPage('login');
 
-    // Wenn bereits eingeloggt -> Dashboard
     if (await getSessionUser()) location.href = 'dashboard.html';
 
-    const form   = document.getElementById('loginForm');
+    const form = document.getElementById('loginForm');
     const alertE = document.getElementById('alert');
-    const btn    = document.getElementById('submitBtn');
+    const btn = document.getElementById('submitBtn');
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       alertE.hidden = true;
       btn.disabled = true;
-      btn.textContent = 'Anmelden …';
+      btn.textContent = 'Anmelden ...';
 
       const fd = new FormData(form);
       const { error } = await supabase.auth.signInWithPassword({
-        email: fd.get('email').trim(),
-        password: fd.get('password'),
+        email: String(fd.get('email') || '').trim(),
+        password: String(fd.get('password') || ''),
       });
 
       if (error) {
@@ -104,12 +105,28 @@
         btn.textContent = 'Anmelden';
         return;
       }
+
+      const pending = loadPendingRegistration();
+      if (pending?.invite && pending?.username) {
+        try {
+          await completeRegistration(pending.invite, pending.username);
+          clearPendingRegistration();
+        } catch (pendingError) {
+          await supabase.auth.signOut();
+          alertE.textContent = pendingError.message || 'Registrierung konnte nach dem Login nicht abgeschlossen werden.';
+          alertE.hidden = false;
+          btn.disabled = false;
+          btn.textContent = 'Anmelden';
+          return;
+        }
+      }
+
       location.href = 'dashboard.html';
     });
 
     function mapError(msg) {
       if (/invalid login/i.test(msg)) return 'E-Mail oder Passwort falsch.';
-      if (/email not confirmed/i.test(msg)) return 'Bitte zuerst die Bestätigungs-Mail öffnen.';
+      if (/email not confirmed/i.test(msg)) return 'Bitte zuerst die Bestaetigungs-Mail oeffnen.';
       return msg;
     }
   </script>

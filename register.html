@@ -45,7 +45,7 @@
           <span class="eyebrow">Neuer Account</span>
           <h2 style="margin: 10px 0 4px;">Registrieren</h2>
           <p style="color: var(--muted); margin: 0 0 24px;">
-            Du brauchst einen Einladungscode vom Teamführer.
+            Du brauchst einen Einladungscode vom Teamfuehrer.
           </p>
 
           <div id="alert" class="alert alert-error" hidden></div>
@@ -72,6 +72,10 @@
               <span>Passwort wiederholen</span>
               <input type="password" name="password2" required minlength="8">
             </label>
+            <div class="field" id="captchaWrap" hidden>
+              <span>Schutzpruefung</span>
+              <div id="turnstileWidget"></div>
+            </div>
             <button type="submit" class="btn-primary" id="submitBtn">Registrieren</button>
           </form>
 
@@ -91,78 +95,93 @@
   <script src="config.js"></script>
   <script type="module">
     import { supabase, initPage, getSessionUser } from './auth.js';
+    import { completeRegistration, inviteCheck, savePendingRegistration } from './secure-api.js';
+
     await initPage('login');
 
     if (await getSessionUser()) location.href = 'dashboard.html';
 
-    const form    = document.getElementById('regForm');
-    const alertE  = document.getElementById('alert');
-    const okE     = document.getElementById('success');
-    const btn     = document.getElementById('submitBtn');
+    const form = document.getElementById('regForm');
+    const alertE = document.getElementById('alert');
+    const okE = document.getElementById('success');
+    const btn = document.getElementById('submitBtn');
+    const captchaWrap = document.getElementById('captchaWrap');
+    const captchaMount = document.getElementById('turnstileWidget');
+    let captchaToken = '';
+    let turnstileWidgetId = null;
+
+    if (window.TURNSTILE_SITE_KEY) {
+      captchaWrap.hidden = false;
+      await loadTurnstileScript();
+      turnstileWidgetId = window.turnstile.render(captchaMount, {
+        sitekey: window.TURNSTILE_SITE_KEY,
+        theme: 'dark',
+        callback: token => {
+          captchaToken = token;
+        },
+        'expired-callback': () => {
+          captchaToken = '';
+        },
+        'error-callback': () => {
+          captchaToken = '';
+        }
+      });
+    }
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       alertE.hidden = true;
       okE.hidden = true;
       btn.disabled = true;
-      btn.textContent = 'Wird angelegt …';
+      btn.textContent = 'Wird angelegt ...';
 
       const fd = new FormData(form);
-      const invite  = fd.get('invite').trim();
-      const user    = fd.get('username').trim();
-      const mail    = fd.get('email').trim();
-      const pw      = fd.get('password');
-      const pw2     = fd.get('password2');
+      const invite = String(fd.get('invite') || '').trim();
+      const username = String(fd.get('username') || '').trim();
+      const email = String(fd.get('email') || '').trim();
+      const password = String(fd.get('password') || '');
+      const password2 = String(fd.get('password2') || '');
 
-      if (pw !== pw2) return fail('Passwörter stimmen nicht überein.');
+      if (password !== password2) return fail('Passwoerter stimmen nicht ueberein.');
 
-      // 1) Username bereits vergeben? (RPC statt direktem Table-Read)
-      const { data: usernameOk, error: usernameErr } = await supabase.rpc('is_username_available', { p_username: user });
-      if (usernameErr) return fail('Benutzername konnte nicht geprÃƒÂ¼ft werden: ' + usernameErr.message);
-      if (!usernameOk) return fail('Benutzername bereits vergeben oder ungÃƒÂ¼ltig.');
+      try {
+        const checked = await inviteCheck(invite, captchaToken);
+        if (!checked.valid) return fail('Einladungscode ungueltig oder bereits verwendet.');
+      } catch (error) {
+        return fail(error.message || 'Einladungscode konnte nicht geprueft werden.');
+      } finally {
+        resetCaptcha();
+      }
 
-      // 2) Einladungscode vorab prÃ¼fen, damit kein Auth-Account ohne Invite entsteht
-      const { data: inviteOk, error: inviteErr } = await supabase.rpc('check_invite_code', { p_code: invite });
-      if (inviteErr) return fail('Einladungscode konnte nicht geprÃ¼ft werden: ' + inviteErr.message);
-      if (!inviteOk) return fail('Einladungscode ungÃ¼ltig oder bereits verwendet.');
-
-      // 3) Account anlegen
       const { data: signUp, error: signErr } = await supabase.auth.signUp({
-        email: mail, password: pw,
-        options: { data: { username: user } }
+        email,
+        password,
+        options: { data: { username } }
       });
+
       if (signErr) return fail(mapError(signErr.message));
 
-      const uid = signUp.user?.id;
-
-      // Falls Email-Confirmation AN ist, haben wir noch keine Session -> direkt einloggen
       let session = signUp.session;
       if (!session) {
-        const { data: login } = await supabase.auth.signInWithPassword({ email: mail, password: pw });
+        const { data: login } = await supabase.auth.signInWithPassword({ email, password });
         session = login?.session;
       }
 
       if (!session) {
-        okE.textContent = 'Konto angelegt. Bitte bestätige die Mail in deinem Postfach, dann kannst du dich einloggen.';
+        savePendingRegistration(invite, username);
+        okE.textContent = 'Konto angelegt. Bitte bestaetige die Mail in deinem Postfach und melde dich danach an. Die Einladung wird beim ersten Login sicher abgeschlossen.';
         okE.hidden = false;
         btn.disabled = false;
         btn.textContent = 'Registrieren';
         return;
       }
 
-      // 3) Einladungscode einlösen
-      const { data: inviteRole, error: redErr } = await supabase.rpc('redeem_invite', { p_code: invite });
-      if (redErr || !inviteRole) {
-        // Account existiert jetzt, aber Invite ist falsch -> Account wieder raus
+      try {
+        await completeRegistration(invite, username);
+      } catch (error) {
         await supabase.auth.signOut();
-        return fail('Einladungscode wurde gerade bereits verwendet. Bitte frage den Teamführer nach einem neuen Code.');
+        return fail(error.message || 'Registrierung konnte nicht abgeschlossen werden.');
       }
-
-      // 4) Profil anlegen
-      const { error: profErr } = await supabase.from('profiles').upsert({
-        id: uid, username: user, role: inviteRole
-      }, { onConflict: 'id' });
-      if (profErr) return fail('Profil konnte nicht angelegt werden: ' + profErr.message);
 
       location.href = 'dashboard.html';
     });
@@ -173,6 +192,27 @@
       btn.disabled = false;
       btn.textContent = 'Registrieren';
     }
+
+    function resetCaptcha() {
+      if (window.turnstile && turnstileWidgetId !== null) {
+        window.turnstile.reset(turnstileWidgetId);
+      }
+      captchaToken = '';
+    }
+
+    async function loadTurnstileScript() {
+      if (window.turnstile) return;
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+        script.async = true;
+        script.defer = true;
+        script.onload = resolve;
+        script.onerror = () => reject(new Error('Turnstile konnte nicht geladen werden.'));
+        document.head.appendChild(script);
+      });
+    }
+
     function mapError(msg) {
       if (/already registered/i.test(msg)) return 'Diese E-Mail ist bereits registriert.';
       if (/password/i.test(msg)) return 'Passwort entspricht nicht den Anforderungen.';

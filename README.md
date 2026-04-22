@@ -24,13 +24,18 @@ Kein PHP, keine eigene Datenbank. Supabase übernimmt:
 Dabei werden automatisch angelegt:
 - Tabellen `profiles`, `invites`, `photos`
 - View `photos_public`
-- Storage-Bucket `photos` (öffentlich lesbar)
-- Der erste Einladungscode: **`TEAM-RAGEBAIT-2026`**
+- Rate-Limit-Tabelle `edge_rate_limits`
 
-### 2b. Security-Hardening (sehr empfohlen)
-Danach im SQL Editor einmal `supabase_security_hardening.sql` ausführen.
-Das zieht RLS-Policies für DB + Storage hart und stoppt u.a. Massenuploads.
-Siehe auch: `SECURITY_CHECKLIST.md` und `INCIDENT_RESPONSE.md`.
+### 2b. Hinweis zum Security-Setup
+Die kritischen Flows laufen jetzt über Supabase Edge Functions mit `service_role`:
+- Invite-Prüfung und Registrierungsabschluss
+- private Medien-Auslieferung per signed URLs
+- sichere Upload-Tickets
+- Admin-/Benutzerbild-Löschung
+
+Wichtig:
+- Den Bucket `photos` im Supabase-Dashboard auf **privat** stellen.
+- Danach die Edge Functions aus `supabase/functions/` deployen.
 
 ### 3. API-Keys kopieren
 1. Links auf **Project Settings** → **API**.
@@ -48,6 +53,28 @@ window.SUPABASE_ANON_KEY = 'eyJ...dein-anon-key...';
 Diese Werte sind **öffentlich** und gehören in den Frontend-Code. Gesperrt wird alles
 über Row-Level-Security (RLS) in der Datenbank – niemand kann ohne Berechtigung
 schreiben.
+
+Optional:
+```js
+window.TURNSTILE_SITE_KEY = 'dein-cloudflare-turnstile-site-key';
+```
+Damit wird auf `register.html` eine zusätzliche Invite-Captcha angezeigt.
+
+### 4b. Edge Functions deployen
+1. Supabase CLI installieren und anmelden.
+2. Im Projektordner die Functions deployen:
+```bash
+supabase functions deploy invite-api
+supabase functions deploy media-api
+```
+3. Falls ihr Turnstile nutzen wollt, Secret setzen:
+```bash
+supabase secrets set TURNSTILE_SECRET_KEY=dein-turnstile-secret
+```
+4. Empfohlen fuer strenge Origin-Pruefung:
+```bash
+supabase secrets set ALLOWED_APP_ORIGINS=https://ragebaiters.de,https://www.ragebaiters.de
+```
 
 ### 5. E-Mail-Bestätigung abschalten (optional, aber bequem)
 Im Supabase-Dashboard:
@@ -68,7 +95,7 @@ ragebaiters.de/
 ├── index.html          Startseite
 ├── team.html           Einheit
 ├── impressum.html      Impressum
-├── mediathek.html      öffentliche Galerie (Lightbox)
+├── mediathek.html      interne Galerie (Lightbox, Login erforderlich)
 ├── login.html          Anmeldung
 ├── register.html       Registrierung mit Invite-Code
 ├── dashboard.html      interner Bereich: Upload + eigene Bilder
@@ -79,7 +106,6 @@ ragebaiters.de/
 ├── config.js           ← deine Supabase-Zugangsdaten (du füllst sie aus)
 ├── auth.js             Supabase-Client + dynamische Nav
 ├── supabase_admin_dashboard.sql  Schema für Supabase (einmalig importieren)
-├── supabase_security_hardening.sql  Security-Hardening (Policies + Limits)
 └── images/             deine bestehenden Logos und Banner
 ```
 
@@ -94,9 +120,13 @@ Jedes neue Mitglied braucht einen **Einladungscode**. So legst du einen an:
 3. Den Code an das Teammitglied weitergeben.
 4. Nach der Registrierung auf `register.html` ist der Code verbraucht.
 
+Fuer das erste Konto:
+- zuerst einen Invite manuell in `invites` anlegen
+- nach der ersten Registrierung die eigene Rolle in `profiles` einmalig auf `admin` setzen
+
 ## Admin-Rechte vergeben
 
-Nach der Registrierung steht dein Account auf `role = 'member'`. Ein Admin kann
+Nach der Registrierung steht dein Account auf `role = 'observer'`, bis der Invite serverseitig abgeschlossen wurde. Ein Admin kann
 bisher nichts Besonderes – das Feld ist vorbereitet für spätere Erweiterungen
 (z.B. andere Bilder löschen dürfen).
 Zum Upgraden: Supabase → Table Editor → `profiles` → deine Zeile → `role` auf `admin` setzen.
@@ -105,11 +135,12 @@ Zum Upgraden: Supabase → Table Editor → `profiles` → deine Zeile → `role
 
 ## Was die Regeln garantieren (RLS-Policies)
 
-- Jeder (auch ausgeloggt) darf die **Mediathek** sehen.
-- Nur **eingeloggte** User dürfen Bilder **hochladen**.
-- Jeder User kann **nur seine eigenen** Bilder löschen.
-- Direkte Schreibzugriffe auf `invites` sind komplett gesperrt – Codes werden
-  ausschließlich über die SQL-Funktion `redeem_invite()` eingelöst.
+- Invite-Prüfung und Registrierungsabschluss laufen serverseitig über Edge Functions.
+- Medien werden serverseitig als signed URLs erzeugt und nicht mehr direkt aus dem Browser freigegeben.
+- Uploads laufen über serverseitig erzeugte Upload-Tickets.
+- Normale Benutzer können nur ihre **eigenen** Bilder löschen.
+- Admins können alle Mediathek-Bilder und Benutzerbilder sicher löschen.
+- Die SQL-Funktion `consume_rate_limit()` begrenzt sensible Aktionen zusätzlich serverseitig.
 
 ---
 
