@@ -75,7 +75,7 @@
 
   <script src="config.js"></script>
   <script type="module">
-    import { supabase, initPage, getSessionUser, buildScopedUrl, waitForSessionUser } from './auth.js';
+    import { supabase, initPage, getSessionUser, buildScopedUrl, waitForSessionUser, rememberPendingSession } from './auth.js';
     await initPage('login');
 
     // Wenn bereits eingeloggt -> Dashboard
@@ -92,7 +92,7 @@
       btn.textContent = 'Anmelden …';
 
       const fd = new FormData(form);
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: fd.get('email').trim(),
         password: fd.get('password'),
       });
@@ -104,6 +104,8 @@
         btn.textContent = 'Anmelden';
         return;
       }
+
+      rememberPendingSession(data?.session);
 
       const readyUser = await waitForSessionUser();
       if (!readyUser) {

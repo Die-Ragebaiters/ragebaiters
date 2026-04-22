@@ -1,4 +1,4 @@
-import { supabase, initPage, getSessionUser, getProfile, buildScopedUrl, waitForSessionUser } from './auth.js';
+import { supabase, initPage, getSessionUser, getProfile, buildScopedUrl, waitForSessionUser, restorePendingSessionUser } from './auth.js';
 
 await initPage('dashboard');
 
@@ -70,6 +70,9 @@ const state = {
 };
 
 state.user = await waitForSessionUser();
+if (!state.user) {
+  state.user = await restorePendingSessionUser();
+}
 if (!state.user) {
   location.href = buildScopedUrl('login.html');
   throw new Error('redirecting-to-login');

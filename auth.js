@@ -12,10 +12,11 @@ if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY ||
 const SESSION_PARAM = 'session';
 const HANDOFF_PARAM = 'handoff';
 const TEST_HANDOFF_PREFIX = 'ragebaiters:test-handoff:';
+const PENDING_SESSION_KEY = 'ragebaiters:pending-session';
 const currentSessionScope = readCurrentSessionScope();
 
 export const defaultSupabase = createSupabaseClient();
-export const supabase = currentSessionScope
+export const supabase = currentSessionScope === 'test-account'
   ? createScopedClient(currentSessionScope)
   : defaultSupabase;
 
@@ -48,6 +49,48 @@ export async function waitForSessionUser(timeoutMs = 2500, stepMs = 125) {
   }
 
   return null;
+}
+
+export function rememberPendingSession(session) {
+  const accessToken = session?.access_token;
+  const refreshToken = session?.refresh_token;
+  if (!accessToken || !refreshToken) return;
+
+  sessionStorage.setItem(PENDING_SESSION_KEY, JSON.stringify({
+    access_token: accessToken,
+    refresh_token: refreshToken,
+    createdAt: Date.now()
+  }));
+}
+
+export async function restorePendingSessionUser(maxAgeMs = 60_000) {
+  await handoffReady;
+
+  let payload = null;
+  try {
+    payload = JSON.parse(sessionStorage.getItem(PENDING_SESSION_KEY) || 'null');
+  } catch {
+    payload = null;
+  }
+
+  if (!payload?.access_token || !payload?.refresh_token) return null;
+  if (Date.now() - Number(payload.createdAt || 0) > maxAgeMs) {
+    sessionStorage.removeItem(PENDING_SESSION_KEY);
+    return null;
+  }
+
+  const { error } = await supabase.auth.setSession({
+    access_token: payload.access_token,
+    refresh_token: payload.refresh_token
+  });
+
+  sessionStorage.removeItem(PENDING_SESSION_KEY);
+  if (error) {
+    console.error('[Ragebaiters] Pending session konnte nicht wiederhergestellt werden:', error);
+    return null;
+  }
+
+  return getSessionUser();
 }
 
 export async function getProfile(userId) {
