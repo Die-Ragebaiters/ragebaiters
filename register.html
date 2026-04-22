@@ -90,10 +90,10 @@
 
   <script src="config.js"></script>
   <script type="module">
-    import { supabase, initPage, getSessionUser } from './auth.js';
+    import { supabase, initPage, getSessionUser, buildScopedUrl } from './auth.js';
     await initPage('login');
 
-    if (await getSessionUser()) location.href = 'dashboard.html';
+    if (await getSessionUser()) location.href = buildScopedUrl('dashboard.html');
 
     const form    = document.getElementById('regForm');
     const alertE  = document.getElementById('alert');
@@ -164,7 +164,7 @@
       }, { onConflict: 'id' });
       if (profErr) return fail('Profil konnte nicht angelegt werden: ' + profErr.message);
 
-      location.href = 'dashboard.html';
+      location.href = buildScopedUrl('dashboard.html');
     });
 
     function fail(msg) {

@@ -24,6 +24,8 @@ drop function if exists public.admin_create_invite(text, text, text);
 drop function if exists public.admin_delete_invite(text);
 drop function if exists public.admin_list_users();
 drop function if exists public.dashboard_list_members();
+drop function if exists public.admin_get_test_account_access();
+drop function if exists public.admin_prepare_test_account(text, text, text);
 drop function if exists public.admin_update_user(uuid, text, text);
 drop function if exists public.admin_delete_user(uuid);
 drop function if exists public.create_photo_upload(text, text, text, bigint, integer, integer);
@@ -347,6 +349,143 @@ as $$
   order by coalesce(p.username, split_part(u.email::text, '@', 1)) asc;
 $$;
 
+create or replace function public.admin_get_test_account_access()
+returns table (
+  email text,
+  password text,
+  username text,
+  role text
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_email text;
+  v_password text;
+  v_username text;
+  v_role text;
+begin
+  if not public.is_admin() then
+    raise exception 'Nur Admins duerfen den Testaccount oeffnen.';
+  end if;
+
+  insert into public.site_settings (key, value_text, updated_at, updated_by)
+  values
+    ('test_account_email', 'testaccount@ragebaiters.local', now(), auth.uid()),
+    ('test_account_username', 'testaccount-preview', now(), auth.uid()),
+    ('test_account_role', 'observer', now(), auth.uid())
+  on conflict (key) do nothing;
+
+  select value_text into v_email
+  from public.site_settings
+  where key = 'test_account_email';
+
+  select value_text into v_username
+  from public.site_settings
+  where key = 'test_account_username';
+
+  select value_text into v_role
+  from public.site_settings
+  where key = 'test_account_role';
+
+  select value_text into v_password
+  from public.site_settings
+  where key = 'test_account_password';
+
+  if coalesce(v_password, '') = '' then
+    v_password := substr(
+      replace(gen_random_uuid()::text, '-', '') ||
+      replace(gen_random_uuid()::text, '-', ''),
+      1,
+      28
+    ) || 'A9!';
+
+    insert into public.site_settings (key, value_text, updated_at, updated_by)
+    values ('test_account_password', v_password, now(), auth.uid())
+    on conflict (key) do update
+      set value_text = excluded.value_text,
+          updated_at = now(),
+          updated_by = auth.uid();
+  end if;
+
+  return query
+  select
+    coalesce(v_email, 'testaccount@ragebaiters.local'),
+    v_password,
+    coalesce(v_username, 'testaccount-preview'),
+    coalesce(v_role, 'observer');
+end;
+$$;
+
+create or replace function public.admin_prepare_test_account(
+  p_email text,
+  p_username text default 'testaccount-preview',
+  p_role text default 'observer'
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_email text;
+  v_username text;
+  v_role text;
+  v_user_id uuid;
+begin
+  if not public.is_admin() then
+    raise exception 'Nur Admins duerfen den Testaccount vorbereiten.';
+  end if;
+
+  v_email := lower(trim(coalesce(p_email, '')));
+  v_username := trim(coalesce(p_username, 'testaccount-preview'));
+  v_role := trim(coalesce(p_role, 'observer'));
+
+  if v_email = '' then
+    raise exception 'Die Testaccount-E-Mail fehlt.';
+  end if;
+
+  if v_role not in ('observer', 'member', 'admin') then
+    raise exception 'Ungueltige Testaccount-Rolle.';
+  end if;
+
+  select id
+  into v_user_id
+  from auth.users
+  where lower(email::text) = v_email
+  order by created_at desc
+  limit 1;
+
+  if v_user_id is null then
+    return false;
+  end if;
+
+  if exists (
+    select 1
+    from public.profiles
+    where username = v_username
+      and id <> v_user_id
+  ) then
+    v_username := left(v_username || '-' || substr(replace(v_user_id::text, '-', ''), 1, 6), 32);
+  end if;
+
+  update auth.users
+  set email_confirmed_at = coalesce(email_confirmed_at, now()),
+      raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || jsonb_build_object('username', v_username),
+      updated_at = now()
+  where id = v_user_id;
+
+  insert into public.profiles (id, username, role)
+  values (v_user_id, v_username, v_role)
+  on conflict (id) do update
+    set username = excluded.username,
+        role = excluded.role;
+
+  return true;
+end;
+$$;
+
 create or replace function public.admin_update_user(
   p_user_id uuid,
   p_username text,
@@ -536,13 +675,23 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  v_nathan_paths text[] := array[
+    '__local__/images/nathanrole.png',
+    '__local__/images/nathanrole2.png',
+    '__local__/images/nathanrole3.png',
+    '__local__/images/nathanrole4.png'
+  ];
+  v_storage_path text;
 begin
   if not public.is_admin() then
     raise exception 'Nur Admins duerfen Uploads als Troll-Post markieren.';
   end if;
 
+  v_storage_path := v_nathan_paths[1 + floor(random() * array_length(v_nathan_paths, 1))::integer];
+
   update public.photos
-  set storage_path = '__local__/images/nathanrole.png',
+  set storage_path = v_storage_path,
       title = 'Nathan Role',
       caption = 'schabbatt schalom',
       mime = 'image/png',
@@ -641,6 +790,8 @@ grant execute on function public.admin_create_invite(text, text, text) to authen
 grant execute on function public.admin_delete_invite(text) to authenticated;
 grant execute on function public.admin_list_users() to authenticated;
 grant execute on function public.dashboard_list_members() to authenticated;
+grant execute on function public.admin_get_test_account_access() to authenticated;
+grant execute on function public.admin_prepare_test_account(text, text, text) to authenticated;
 grant execute on function public.admin_update_user(uuid, text, text) to authenticated;
 grant execute on function public.admin_delete_user(uuid) to authenticated;
 grant execute on function public.create_photo_upload(text, text, text, bigint, integer, integer) to authenticated;

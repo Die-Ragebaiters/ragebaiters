@@ -720,6 +720,19 @@
   color: var(--muted);
 }
 
+.test-account-card {
+  display: grid;
+  gap: 14px;
+}
+
+.test-account-card .form-actions {
+  margin-top: 2px;
+}
+
+.test-account-card .admin-message {
+  margin-top: 0;
+}
+
 .banner-settings-grid {
   display: grid;
   gap: 20px;

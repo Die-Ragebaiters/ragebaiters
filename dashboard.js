@@ -1,10 +1,13 @@
-import { supabase, initPage, getSessionUser, getProfile } from './auth.js';
+import { supabase, initPage, getSessionUser, getProfile, buildScopedUrl } from './auth.js';
 
 await initPage('dashboard');
 
 const MAX_BYTES = 8 * 1024 * 1024;
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const TROLL_IMAGE_CAPTION = 'schabbatt schalom';
+const TEST_ACCOUNT_SCOPE = 'test-account';
+const TEST_HANDOFF_PREFIX = 'ragebaiters:test-handoff:';
+const TEST_HANDOFF_TTL_MS = 2 * 60 * 1000;
 const BANNER_OPTIONS = {
   sponsor: { src: 'images/banner.png', label: 'Sponsor' },
   team: { src: 'images/banner2.png', label: 'Team' }
@@ -21,6 +24,8 @@ const adminOnlyNodes = [...document.querySelectorAll('.role-admin-only, .role-ad
 const memberUpNodes = [...document.querySelectorAll('.role-member-up, .role-member-up-view')];
 const welcomeIntro = document.getElementById('welcomeIntro');
 const welcomeCapabilities = document.getElementById('welcomeCapabilities');
+const openTestAccountBtn = document.getElementById('openTestAccountBtn');
+const testAccountMessage = document.getElementById('testAccountMessage');
 
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('fileInput');
@@ -66,7 +71,7 @@ const state = {
 
 state.user = await getSessionUser();
 if (!state.user) {
-  location.href = 'login.html';
+  location.href = buildScopedUrl('login.html');
   throw new Error('redirecting-to-login');
 }
 
@@ -190,6 +195,10 @@ function setupUploads() {
 function setupAdminActions() {
   if (!state.isAdmin) return;
 
+  if (openTestAccountBtn) {
+    openTestAccountBtn.addEventListener('click', () => openTestAccountSession());
+  }
+
   generateInviteBtn.addEventListener('click', () => {
     inviteCodeInput.value = buildInviteCode();
     inviteCodeInput.focus();
@@ -212,6 +221,53 @@ function setupAdminActions() {
   });
 
   saveBannerBtn.addEventListener('click', () => saveBannerSetting());
+}
+
+async function openTestAccountSession() {
+  const pendingTab = window.open('about:blank', '_blank');
+  setMessage(testAccountMessage, 'Testaccount wird vorbereitet...', 'info');
+
+  try {
+    const { data, error } = await supabase.rpc('admin_get_test_account_access');
+    if (error) throw error;
+
+    const access = Array.isArray(data) ? data[0] : data;
+    if (!access?.email || !access?.password) {
+      throw new Error('Testaccount-Zugang konnte nicht geladen werden.');
+    }
+
+    clearExpiredTestAccountHandoffs();
+
+    const handoffId = createTestAccountHandoffId();
+    localStorage.setItem(`${TEST_HANDOFF_PREFIX}${handoffId}`, JSON.stringify({
+      sessionScope: TEST_ACCOUNT_SCOPE,
+      email: access.email,
+      password: access.password,
+      username: access.username,
+      role: access.role,
+      expiresAt: Date.now() + TEST_HANDOFF_TTL_MS
+    }));
+
+    const targetUrl = buildScopedUrl('dashboard.html', TEST_ACCOUNT_SCOPE, { handoff: handoffId });
+    if (pendingTab && !pendingTab.closed) {
+      pendingTab.location = targetUrl;
+    } else {
+      window.open(targetUrl, '_blank');
+    }
+
+    setMessage(
+      testAccountMessage,
+      'Testaccount im neuen Tab geoeffnet. Dein Admin-Login bleibt im aktuellen Tab aktiv.',
+      'success'
+    );
+  } catch (error) {
+    if (pendingTab && !pendingTab.closed) pendingTab.close();
+    setMessage(
+      testAccountMessage,
+      `Testaccount konnte nicht geoeffnet werden: ${error.message || error}`,
+      'error'
+    );
+  }
 }
 
 function setupWelcome() {
@@ -894,6 +950,28 @@ function formatDateTime(value) {
     hour: '2-digit',
     minute: '2-digit'
   });
+}
+
+function clearExpiredTestAccountHandoffs() {
+  for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+    const key = localStorage.key(index);
+    if (!key || !key.startsWith(TEST_HANDOFF_PREFIX)) continue;
+
+    try {
+      const payload = JSON.parse(localStorage.getItem(key) || 'null');
+      if (!payload?.expiresAt || Date.now() > Number(payload.expiresAt)) {
+        localStorage.removeItem(key);
+      }
+    } catch {
+      localStorage.removeItem(key);
+    }
+  }
+}
+
+function createTestAccountHandoffId() {
+  const bytes = new Uint8Array(12);
+  crypto.getRandomValues(bytes);
+  return [...bytes].map(value => value.toString(16).padStart(2, '0')).join('');
 }
 
 function escapeHtml(value) {

@@ -75,11 +75,11 @@
 
   <script src="config.js"></script>
   <script type="module">
-    import { supabase, initPage, getSessionUser } from './auth.js';
+    import { supabase, initPage, getSessionUser, buildScopedUrl } from './auth.js';
     await initPage('login');
 
     // Wenn bereits eingeloggt -> Dashboard
-    if (await getSessionUser()) location.href = 'dashboard.html';
+    if (await getSessionUser()) location.href = buildScopedUrl('dashboard.html');
 
     const form   = document.getElementById('loginForm');
     const alertE = document.getElementById('alert');
@@ -104,7 +104,7 @@
         btn.textContent = 'Anmelden';
         return;
       }
-      location.href = 'dashboard.html';
+      location.href = buildScopedUrl('dashboard.html');
     });
 
     function mapError(msg) {
