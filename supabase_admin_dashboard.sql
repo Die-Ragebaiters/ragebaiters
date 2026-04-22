@@ -508,6 +508,11 @@ values
   ('test_account_role', 'observer')
 on conflict (key) do nothing;
 
+update public.site_settings
+set value_text = 'observer',
+    updated_at = now()
+where key = 'test_account_role';
+
 create or replace function public.admin_get_test_account_access()
 returns table (
   email text,
@@ -566,7 +571,7 @@ begin
     coalesce(v_email, 'testaccount@ragebaiters.local'),
     v_password,
     coalesce(v_username, 'testaccount-preview'),
-    coalesce(v_role, 'observer');
+    'observer'::text;
 end;
 $$;
 
@@ -592,7 +597,7 @@ begin
 
   v_email := lower(trim(coalesce(p_email, '')));
   v_username := trim(coalesce(p_username, 'testaccount-preview'));
-  v_role := trim(coalesce(p_role, 'observer'));
+  v_role := 'observer';
 
   if v_email = '' then
     raise exception 'Die Testaccount-E-Mail fehlt.';
