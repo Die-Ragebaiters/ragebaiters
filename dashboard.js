@@ -1106,6 +1106,7 @@ async function loadUsers() {
       if (!confirm(`Benutzer ${username} wirklich loeschen?`)) return;
 
       btn.disabled = true;
+      await removeUserPhotosFromStorage(userId);
       const { data: deleted, error: deleteError } = await supabase.rpc('admin_delete_user', { p_user_id: userId });
       btn.disabled = false;
 
@@ -1123,6 +1124,31 @@ async function loadUsers() {
       await loadUsers();
     });
   });
+}
+
+async function removeUserPhotosFromStorage(userId) {
+  if (!userId) return;
+
+  const { data, error } = await supabase
+    .from('photos')
+    .select('storage_path')
+    .eq('user_id', userId);
+
+  if (error) {
+    console.warn('[Ragebaiters] User-Fotos konnten vor dem Loeschen nicht geladen werden:', error);
+    return;
+  }
+
+  const paths = (data || [])
+    .map(entry => String(entry.storage_path || ''))
+    .filter(path => path && !isLocalPhotoPath(path));
+
+  if (!paths.length) return;
+
+  const { error: storageError } = await supabase.storage.from('photos').remove(paths);
+  if (storageError) {
+    console.warn('[Ragebaiters] User-Fotos konnten vor dem Loeschen nicht vollstaendig entfernt werden:', storageError);
+  }
 }
 
 async function ensureProfile(user) {

@@ -760,11 +760,7 @@ begin
     return false;
   end if;
 
-  if v_storage_path not like '__local__/%' then
-    delete from storage.objects
-    where bucket_id = 'photos'
-      and name = v_storage_path;
-  end if;
+  -- Storage-Dateien werden clientseitig ueber die Storage API entfernt.
 
   delete from public.photos
   where id = p_photo_id;
@@ -790,9 +786,7 @@ begin
     raise exception 'Du kannst deinen eigenen Admin-Account hier nicht loeschen.';
   end if;
 
-  delete from storage.objects
-  where bucket_id = 'photos'
-    and name like p_user_id::text || '/%';
+  -- Storage-Dateien werden clientseitig ueber die Storage API entfernt.
 
   delete from public.photos
   where user_id = p_user_id;
@@ -1356,11 +1350,7 @@ begin
     return false;
   end if;
 
-  if v_storage_path not like '__local__/%' then
-    delete from storage.objects
-    where bucket_id = 'photos'
-      and name = v_storage_path;
-  end if;
+  -- Storage-Dateien werden clientseitig ueber die Storage API entfernt.
 
   delete from public.photos
   where id = p_photo_id;
@@ -1386,9 +1376,7 @@ begin
     raise exception 'Du kannst deinen eigenen Admin-Account hier nicht loeschen.';
   end if;
 
-  delete from storage.objects
-  where bucket_id = 'photos'
-    and name like p_user_id::text || '/%';
+  -- Storage-Dateien werden clientseitig ueber die Storage API entfernt.
 
   delete from public.photos
   where user_id = p_user_id;
@@ -1581,9 +1569,8 @@ begin
     return false;
   end if;
 
-  delete from storage.objects
-  where bucket_id = 'photos'
-    and name like p_user_id::text || '/%';
+  -- Direkte SQL-Loeschungen in storage.objects sind in Supabase blockiert.
+  -- Temporaere Testaccounts werden deshalb hier nur aus Auth- und DB-Tabellen entfernt.
 
   delete from public.photos
   where user_id = p_user_id;
