@@ -515,6 +515,46 @@ h2 { font-size: clamp(1.8rem, 8vw, 3rem); font-weight: 900; line-height: 1.2; }
   text-align: center;
 }
 
+.instagram-section {
+  padding-top: 0;
+}
+
+.instagram-card {
+  display: grid;
+  gap: 18px;
+  justify-items: center;
+  padding: 26px 20px;
+}
+
+.instagram-embed-shell {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.instagram-embed-shell .instagram-media {
+  width: 100% !important;
+  max-width: 540px !important;
+  min-width: min(100%, 280px) !important;
+}
+
+.instagram-fallback {
+  width: 100%;
+  max-width: 540px;
+  text-align: center;
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px dashed rgba(183,255,60,0.25);
+  background: rgba(255,255,255,0.03);
+}
+
+.instagram-fallback p {
+  margin: 0;
+  color: var(--muted);
+}
+
 .modal {
   display: none;
   position: fixed;

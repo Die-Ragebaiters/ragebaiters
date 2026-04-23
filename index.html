@@ -103,6 +103,22 @@
         </article>
       </div>
     </section>
+
+    <section class="section instagram-section">
+      <div class="latest-media-head">
+        <div>
+          <span class="eyebrow">Instagram</span>
+          <h2 style="margin: 10px 0 4px;">Neuester Instagram-Content</h2>
+          <p style="color: var(--muted); margin: 0;">Ganz unten auf der Startseite wird euer oeffentliches Instagram-Profil eingebettet. Dadurch bleiben die aktuellsten Inhalte direkt sichtbar.</p>
+        </div>
+        <a href="https://www.instagram.com/die_ragebaiters/" target="_blank" rel="noopener">Instagram oeffnen</a>
+      </div>
+      <div id="instagram-embed">
+        <article class="card instagram-card">
+          <div class="latest-media-empty">Instagram wird geladen...</div>
+        </article>
+      </div>
+    </section>
   </main>
 
   <footer class="footer container">
@@ -117,6 +133,8 @@
 
   const topBannerImg = document.querySelector('.top-banner img');
   const latestMedia = document.getElementById('latest-media');
+  const instagramEmbed = document.getElementById('instagram-embed');
+  const instagramProfileUrl = 'https://www.instagram.com/die_ragebaiters/';
 
   const { data: bannerVariant } = await supabase.rpc('get_homepage_banner');
   if (bannerVariant === 'sponsor') {
@@ -161,6 +179,8 @@
       </article>`;
   }
 
+  await renderInstagramProfileEmbed();
+
   function formatDate(value) {
     if (!value) return 'Unbekanntes Datum';
     return new Date(value).toLocaleDateString('de-DE', {
@@ -184,6 +204,70 @@
     }
     const { data: pub } = supabase.storage.from('photos').getPublicUrl(path);
     return pub.publicUrl;
+  }
+
+  async function renderInstagramProfileEmbed() {
+    if (!instagramEmbed) return;
+
+    instagramEmbed.innerHTML = `
+      <article class="card instagram-card">
+        <div class="instagram-embed-shell">
+          <blockquote
+            class="instagram-media"
+            data-instgrm-permalink="${instagramProfileUrl}"
+            data-instgrm-version="14"
+            style="margin: 0 auto; max-width: 540px; width: 100%;">
+          </blockquote>
+        </div>
+        <div class="instagram-fallback" hidden>
+          <p>Instagram konnte hier gerade nicht direkt geladen werden.</p>
+          <a href="${instagramProfileUrl}" target="_blank" rel="noopener">Zum Instagram-Profil</a>
+        </div>
+      </article>`;
+
+    const fallback = instagramEmbed.querySelector('.instagram-fallback');
+
+    try {
+      await ensureInstagramEmbedScript();
+      if (window.instgrm?.Embeds?.process) {
+        window.instgrm.Embeds.process();
+      }
+    } catch (embedError) {
+      console.error('[Ragebaiters] Instagram-Embed konnte nicht geladen werden:', embedError);
+      fallback.hidden = false;
+      return;
+    }
+
+    window.setTimeout(() => {
+      const renderedIframe = instagramEmbed.querySelector('iframe');
+      const renderedBlock = instagramEmbed.querySelector('.instagram-media-rendered');
+      if (!renderedIframe && !renderedBlock && fallback) {
+        fallback.hidden = false;
+      }
+    }, 3500);
+  }
+
+  function ensureInstagramEmbedScript() {
+    if (window.instgrm?.Embeds?.process) {
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve, reject) => {
+      const existing = document.querySelector('script[data-instagram-embed="1"]');
+      if (existing) {
+        existing.addEventListener('load', resolve, { once: true });
+        existing.addEventListener('error', reject, { once: true });
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.async = true;
+      script.src = 'https://www.instagram.com/embed.js';
+      script.dataset.instagramEmbed = '1';
+      script.addEventListener('load', resolve, { once: true });
+      script.addEventListener('error', reject, { once: true });
+      document.body.appendChild(script);
+    });
   }
 </script>
 </body>
