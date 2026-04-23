@@ -109,6 +109,7 @@
         <div>
           <span class="eyebrow">Instagram</span>
           <h2 style="margin: 10px 0 4px;">Neuester Instagram-Beitrag</h2>
+          <p style="color: var(--muted); margin: 0;">Der Bereich ist jetzt im Design der Seite vorbereitet und kann spaeter direkt an eine Live-Instagram-Datenquelle angebunden werden.</p>
         </div>
         <a href="https://www.instagram.com/die_ragebaiters/" target="_blank" rel="noopener">Instagram oeffnen</a>
       </div>
@@ -250,6 +251,7 @@
           <div class="instagram-post-copy">
             <span class="instagram-post-kicker">Live vorbereitet</span>
             <h3>${escapeHtml(post.title || 'Neuester Beitrag von die_ragebaiters')}</h3>
+            <p>${escapeHtml(post.caption || 'Der aktuellste Instagram-Beitrag kann hier im Stil der Website dargestellt werden.')}</p>
             <div class="instagram-post-meta">
               <span>@${escapeHtml(post.username || 'die_ragebaiters')}</span>
               <span>${formatInstagramDate(post.posted_at)}</span>
