@@ -221,7 +221,7 @@
       return;
     }
 
-    if (!post?.post_url || !post?.image_url) {
+    if (!post?.post_url && !post?.image_url && !post?.title && !post?.caption) {
       instagramLatest.innerHTML = buildInstagramFallbackCard({
         title: 'Noch kein Instagram-Beitrag hinterlegt',
         copy: 'Sobald die Datenquelle verbunden ist, erscheint hier automatisch nur der aktuellste Instagram-Beitrag im Look der Website.'
@@ -229,13 +229,25 @@
       return;
     }
 
+    const imageMarkup = post.image_url
+      ? `<img class="instagram-post-image" src="${escapeHtmlAttr(post.image_url)}" alt="${escapeHtmlAttr(post.title || 'Neuester Instagram-Beitrag')}">`
+      : `
+        <div class="instagram-post-placeholder-inner">
+          <strong>${escapeHtml(post.username || 'die_ragebaiters')}</strong>
+          <span>Cover-Bild fehlt noch</span>
+        </div>`;
+
+    const primaryAction = post.post_url
+      ? `<a href="${escapeHtmlAttr(post.post_url)}" target="_blank" rel="noopener">Beitrag ansehen</a>`
+      : `<a href="${instagramProfileUrl}" target="_blank" rel="noopener">Profil oeffnen</a>`;
+
     instagramLatest.innerHTML = `
       <article class="card instagram-post-card">
         <div class="instagram-post-grid">
-          <a class="instagram-post-image-wrap" href="${escapeHtmlAttr(post.post_url)}" target="_blank" rel="noopener" aria-label="Instagram-Beitrag oeffnen">
-            <img class="instagram-post-image" src="${escapeHtmlAttr(post.image_url)}" alt="${escapeHtmlAttr(post.title || 'Neuester Instagram-Beitrag')}">
+          <div class="instagram-post-image-wrap ${post.image_url ? '' : 'instagram-post-placeholder'}">
+            ${imageMarkup}
             <span class="instagram-post-badge">Instagram</span>
-          </a>
+          </div>
           <div class="instagram-post-copy">
             <span class="instagram-post-kicker">Live vorbereitet</span>
             <h3>${escapeHtml(post.title || 'Neuester Beitrag von die_ragebaiters')}</h3>
@@ -245,7 +257,7 @@
               <span>${formatInstagramDate(post.posted_at)}</span>
             </div>
             <div class="instagram-post-actions">
-              <a href="${escapeHtmlAttr(post.post_url)}" target="_blank" rel="noopener">Beitrag ansehen</a>
+              ${primaryAction}
               <a class="instagram-post-secondary" href="${instagramProfileUrl}" target="_blank" rel="noopener">Profil oeffnen</a>
             </div>
           </div>

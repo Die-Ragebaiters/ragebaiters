@@ -65,6 +65,15 @@ const bannerRadios = [...document.querySelectorAll('input[name="homepageBanner"]
 const bannerPreview = document.getElementById('bannerPreview');
 const saveBannerBtn = document.getElementById('saveBannerBtn');
 const bannerMessage = document.getElementById('bannerMessage');
+const instagramPostUrlInput = document.getElementById('instagramPostUrlInput');
+const instagramImageUrlInput = document.getElementById('instagramImageUrlInput');
+const instagramTitleInput = document.getElementById('instagramTitleInput');
+const instagramUsernameInput = document.getElementById('instagramUsernameInput');
+const instagramPostedAtInput = document.getElementById('instagramPostedAtInput');
+const instagramCaptionInput = document.getElementById('instagramCaptionInput');
+const saveInstagramBtn = document.getElementById('saveInstagramBtn');
+const instagramPreview = document.getElementById('instagramPreview');
+const instagramMessage = document.getElementById('instagramMessage');
 
 const refreshUsersBtn = document.getElementById('refreshUsersBtn');
 const usersTitle = document.getElementById('usersTitle');
@@ -141,7 +150,8 @@ if (state.isAdmin) {
   await Promise.all([
     loadPendingReviews(),
     loadInvites(),
-    loadBannerSetting()
+    loadBannerSetting(),
+    loadInstagramSettings()
   ]);
 }
 
@@ -241,6 +251,18 @@ function setupAdminActions() {
   });
 
   saveBannerBtn.addEventListener('click', () => saveBannerSetting());
+  saveInstagramBtn.addEventListener('click', () => saveInstagramSettings());
+
+  [
+    instagramPostUrlInput,
+    instagramImageUrlInput,
+    instagramTitleInput,
+    instagramUsernameInput,
+    instagramPostedAtInput,
+    instagramCaptionInput
+  ].forEach(field => {
+    field?.addEventListener('input', () => updateInstagramPreview());
+  });
 }
 
 async function openTestAccountSession() {
@@ -782,6 +804,178 @@ function updateBannerPreview(variant) {
   const config = BANNER_OPTIONS[variant] || BANNER_OPTIONS.team;
   bannerPreview.src = config.src;
   bannerPreview.alt = `${config.label} Banner Vorschau`;
+}
+
+async function loadInstagramSettings() {
+  const { data, error } = await supabase.rpc('get_homepage_instagram_post');
+
+  if (error) {
+    setMessage(instagramMessage, `Instagram-Einstellung konnte nicht geladen werden: ${error.message}`, 'error');
+    updateInstagramPreview();
+    return;
+  }
+
+  const post = Array.isArray(data) ? data[0] : data;
+  instagramPostUrlInput.value = String(post?.post_url || '');
+  instagramImageUrlInput.value = String(post?.image_url || '');
+  instagramTitleInput.value = String(post?.title || '');
+  instagramUsernameInput.value = String(post?.username || 'die_ragebaiters');
+  instagramCaptionInput.value = String(post?.caption || '');
+  instagramPostedAtInput.value = toDateTimeLocalValue(post?.posted_at);
+
+  updateInstagramPreview();
+  setMessage(instagramMessage, '', 'info', true);
+}
+
+async function saveInstagramSettings() {
+  const payload = collectInstagramFormValues();
+
+  if (payload.postUrl && !isProbablyUrl(payload.postUrl)) {
+    setMessage(instagramMessage, 'Bitte einen gueltigen Instagram-Link eintragen.', 'error');
+    return;
+  }
+
+  if (payload.imageUrl && !isProbablyUrl(payload.imageUrl)) {
+    setMessage(instagramMessage, 'Bitte eine gueltige direkte Bild- oder Cover-URL eintragen.', 'error');
+    return;
+  }
+
+  const { error } = await supabase.rpc('admin_set_homepage_instagram_post', {
+    p_post_url: payload.postUrl,
+    p_image_url: payload.imageUrl,
+    p_title: payload.title,
+    p_caption: payload.caption,
+    p_posted_at: payload.postedAt || null,
+    p_username: payload.username || 'die_ragebaiters'
+  });
+
+  if (error) {
+    setMessage(instagramMessage, `Instagram-Beitrag konnte nicht gespeichert werden: ${error.message}`, 'error');
+    return;
+  }
+
+  updateInstagramPreview();
+  setMessage(instagramMessage, 'Instagram-Beitrag fuer die Startseite gespeichert.', 'success');
+}
+
+function updateInstagramPreview() {
+  if (!instagramPreview) return;
+
+  const payload = collectInstagramFormValues();
+  const hasPost = Boolean(payload.postUrl || payload.imageUrl || payload.title || payload.caption);
+
+  if (!hasPost) {
+    instagramPreview.innerHTML = buildInstagramPreviewPlaceholder();
+    return;
+  }
+
+  const imageMarkup = payload.imageUrl
+    ? `<img class="instagram-post-image" src="${escapeHtmlAttr(payload.imageUrl)}" alt="${escapeHtmlAttr(payload.title || 'Instagram-Vorschau')}">`
+    : `
+      <div class="instagram-post-placeholder-inner">
+        <strong>${escapeHtml(payload.username || 'die_ragebaiters')}</strong>
+        <span>Cover-Bild fehlt noch</span>
+      </div>`;
+
+  const primaryAction = payload.postUrl
+    ? `<a href="${escapeHtmlAttr(payload.postUrl)}" target="_blank" rel="noopener">Beitrag ansehen</a>`
+    : `<span class="btn-secondary" style="pointer-events:none;">Link fehlt noch</span>`;
+
+  instagramPreview.innerHTML = `
+    <article class="card instagram-post-card">
+      <div class="instagram-post-grid">
+        <div class="instagram-post-image-wrap ${payload.imageUrl ? '' : 'instagram-post-placeholder'}">
+          ${imageMarkup}
+          <span class="instagram-post-badge">Instagram</span>
+        </div>
+        <div class="instagram-post-copy">
+          <span class="instagram-post-kicker">Vorschau</span>
+          <h3>${escapeHtml(payload.title || 'Neuester Instagram-Beitrag')}</h3>
+          <p>${escapeHtml(payload.caption || 'Hier erscheint dein hinterlegter Instagram-Beitrag im Look der Startseite.')}</p>
+          <div class="instagram-post-meta">
+            <span>@${escapeHtml(payload.username || 'die_ragebaiters')}</span>
+            <span>${escapeHtml(formatInstagramPreviewDate(payload.postedAt))}</span>
+          </div>
+          <div class="instagram-post-actions">
+            ${primaryAction}
+            <a class="instagram-post-secondary" href="https://www.instagram.com/die_ragebaiters/" target="_blank" rel="noopener">Profil oeffnen</a>
+          </div>
+        </div>
+      </div>
+    </article>`;
+}
+
+function buildInstagramPreviewPlaceholder() {
+  return `
+    <article class="card instagram-post-card instagram-post-card-empty">
+      <div class="instagram-post-grid">
+        <div class="instagram-post-image-wrap instagram-post-placeholder">
+          <span class="instagram-post-badge">Instagram</span>
+          <div class="instagram-post-placeholder-inner">
+            <strong>die_ragebaiters</strong>
+            <span>Noch kein Beitrag eingetragen</span>
+          </div>
+        </div>
+        <div class="instagram-post-copy">
+          <span class="instagram-post-kicker">Vorschau</span>
+          <h3>Neuester Instagram-Beitrag</h3>
+          <p>Trage oben einen Link, ein Cover-Bild und optional Titel oder Text ein. Danach erscheint die Karte genauso auf der Startseite.</p>
+          <div class="instagram-post-meta">
+            <span>@die_ragebaiters</span>
+            <span>Wartet auf Eingabe</span>
+          </div>
+        </div>
+      </div>
+    </article>`;
+}
+
+function collectInstagramFormValues() {
+  return {
+    postUrl: String(instagramPostUrlInput?.value || '').trim(),
+    imageUrl: String(instagramImageUrlInput?.value || '').trim(),
+    title: String(instagramTitleInput?.value || '').trim(),
+    username: String(instagramUsernameInput?.value || '').trim(),
+    postedAt: String(instagramPostedAtInput?.value || '').trim(),
+    caption: String(instagramCaptionInput?.value || '').trim()
+  };
+}
+
+function toDateTimeLocalValue(value) {
+  if (!value) return '';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function formatInstagramPreviewDate(value) {
+  if (!value) return 'Neuester Beitrag';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Neuester Beitrag';
+
+  return date.toLocaleString('de-DE', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function isProbablyUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 async function loadUsers() {

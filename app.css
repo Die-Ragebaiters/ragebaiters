@@ -770,6 +770,20 @@
   margin-top: 18px;
 }
 
+.instagram-admin-hint {
+  margin-top: 28px;
+}
+
+.instagram-dashboard-preview {
+  margin-top: 22px;
+  display: grid;
+  gap: 14px;
+}
+
+.instagram-dashboard-preview #instagramPreview {
+  display: grid;
+}
+
 .inline-field {
   display: grid;
   gap: 6px;
