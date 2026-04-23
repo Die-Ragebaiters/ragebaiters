@@ -33,6 +33,7 @@ const roleBadge = document.getElementById('roleBadge');
 const memberNote = document.getElementById('memberNote');
 const tabButtons = [...document.querySelectorAll('.dashboard-tab')];
 const viewSections = [...document.querySelectorAll('.dashboard-view')];
+const quickButtons = [...document.querySelectorAll('.dash-quick-btn[href^="#"]')];
 const adminOnlyNodes = [...document.querySelectorAll('.role-admin-only, .role-admin-view')];
 const memberUpNodes = [...document.querySelectorAll('.role-member-up, .role-member-up-view')];
 const welcomeIntro = document.getElementById('welcomeIntro');
@@ -146,6 +147,7 @@ if (state.canUpload) setupUploads();
 if (state.canViewUsers) refreshUsersBtn.addEventListener('click', () => loadUsers());
 setupAdminActions();
 setupTestAccountLifecycle();
+setupTeamMembersEditorActions();
 
 loadingSection.hidden = true;
 mainSection.hidden = false;
@@ -178,6 +180,10 @@ function setupNavigation() {
   });
 }
 
+function setupTeamMembersEditorActions() {
+  addTeamMemberBtn?.addEventListener('click', () => addTeamMember());
+}
+
 function normalizeView(view) {
   const allowed = ['welcome', 'team'];
   if (state.canUpload) allowed.push('uploads');
@@ -200,6 +206,15 @@ function setActiveView(view) {
   if (location.hash !== `#${safeView}`) {
     history.replaceState(null, '', `#${safeView}`);
   }
+  syncQuickButtons(safeView);
+}
+
+function syncQuickButtons(activeView) {
+  if (!quickButtons.length) return;
+  quickButtons.forEach(link => {
+    const hash = String(link.getAttribute('href') || '').replace('#', '');
+    link.classList.toggle('is-active', hash === activeView);
+  });
 }
 
 function setupUploads() {
@@ -258,7 +273,6 @@ function setupAdminActions() {
   });
 
   saveBannerBtn.addEventListener('click', () => saveBannerSetting());
-  saveTeamMembersBtn?.addEventListener('click', () => saveTeamMembers());
   saveInstagramBtn.addEventListener('click', () => saveInstagramSettings());
 
   [
@@ -887,6 +901,11 @@ async function loadTeamMembers() {
 }
 
 async function saveTeamMembers() {
+  if (!state.isAdmin) {
+    setMessage(teamMembersMessage, 'Nur Admins koennen Team-Kacheln speichern.', 'error');
+    return;
+  }
+
   const payload = normalizeTeamMembers(state.teamMembers);
 
   if (!payload.length) {
@@ -905,11 +924,45 @@ async function saveTeamMembers() {
   setMessage(teamMembersMessage, 'Team-Daten gespeichert.', 'success');
 }
 
+function addTeamMember() {
+  if (!state.isAdmin) {
+    setMessage(teamMembersMessage, 'Nur Admins koennen neue Team-Kacheln anlegen.', 'error');
+    return;
+  }
+
+  const nowId = generateTeamMemberId();
+  const members = normalizeTeamMembers(state.teamMembers);
+  const maxSort = members.reduce((acc, entry) => Math.max(acc, Number(entry.sort_order) || 0), 0);
+  const nextSort = Math.min(999, Math.max(1, maxSort + 10));
+
+  state.teamMembers = [
+    ...members,
+    {
+      id: nowId,
+      name: '',
+      role: '',
+      description: '',
+      image_url: '',
+      is_leader: false,
+      sort_order: nextSort
+    }
+  ];
+
+  renderTeamMembersEditor();
+  setMessage(teamMembersMessage, 'Neue Kachel hinzugefuegt. Bitte noch "Team speichern" klicken.', 'info');
+
+  requestAnimationFrame(() => {
+    const node = teamMembersEditor?.querySelector(`[data-member-id="${cssEscape(nowId)}"] [data-field="name"]`);
+    node?.focus?.();
+  });
+}
+
 function renderTeamMembersEditor() {
   if (!teamMembersEditor) return;
 
   const members = normalizeTeamMembers(state.teamMembers);
   state.teamMembers = members;
+  const isReadOnly = !state.isAdmin;
 
   if (!members.length) {
     teamMembersEditor.innerHTML = '<div class="table-empty">Noch keine Team-Mitglieder hinterlegt.</div>';
@@ -919,52 +972,79 @@ function renderTeamMembersEditor() {
   teamMembersEditor.innerHTML = members.map(member => `
     <article class="team-editor-card ${member.is_leader ? 'is-leader' : ''}" data-member-id="${escapeHtmlAttr(member.id)}">
       <div class="team-editor-head">
-        <div>
-          <strong>${escapeHtml(member.name || 'Unbenanntes Mitglied')}</strong>
+        <div class="team-editor-identity">
+          <img class="team-editor-avatar" src="${escapeHtmlAttr(resolveTeamMemberImage(member.image_url))}" alt="" onerror="this.src='images/logo.png'">
+          <div class="team-editor-title">
+            <strong title="${escapeHtmlAttr(member.name || 'Unbenanntes Mitglied')}">${escapeHtml(member.name || 'Unbenanntes Mitglied')}</strong>
+            <div class="team-editor-sub">ID: ${escapeHtml(member.id)} &middot; Sortierung: ${escapeHtml(String(member.sort_order))}</div>
+          </div>
         </div>
-        <div class="team-editor-badges">
+
+        <div class="team-editor-actions">
+          ${isReadOnly ? '' : `
+            <button type="button" class="btn-tertiary" data-action="move-up" title="Nach oben">↑</button>
+            <button type="button" class="btn-tertiary" data-action="move-down" title="Nach unten">↓</button>
+            <button type="button" class="btn-secondary" data-action="choose-team-image">Bild auswaehlen</button>
+            <input class="team-editor-file" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-action="team-image-file">
+          `}
+        </div>
+
+        <div class="team-editor-badges" aria-label="Metadaten">
           <span class="team-editor-badge ${member.is_leader ? 'is-leader' : ''}">${member.is_leader ? 'Teamfuehrung' : 'Operator'}</span>
-          <span class="team-editor-badge">Sortierung ${member.sort_order}</span>
+          <span class="team-editor-badge">${member.image_url ? 'Bild gesetzt' : 'Kein Bild'}</span>
         </div>
       </div>
+
       <div class="team-editor-layout">
         <div class="team-editor-media">
           <img class="team-editor-image" src="${escapeHtmlAttr(resolveTeamMemberImage(member.image_url))}" alt="${escapeHtmlAttr(member.name || 'Teammitglied')}" data-preview-image onerror="this.src='images/logo.png'">
-          <div class="team-editor-actions">
-            <button type="button" class="btn-secondary" data-action="choose-team-image">Bild auswaehlen</button>
-            <input class="team-editor-file" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-action="team-image-file">
-          </div>
-          <div class="team-editor-note">Empfohlen: quadratisches Bild als JPG, PNG, WebP oder GIF.</div>
+          <div class="team-editor-note">Tipp: quadratisches Bild (JPG/PNG/WebP/GIF), max. 8 MB.</div>
         </div>
+
         <div class="team-editor-meta">
           <div class="form-row form-row-two">
             <label class="field">
               <span>Name</span>
-              <input type="text" value="${escapeHtmlAttr(member.name)}" data-field="name" maxlength="120">
+              <input type="text" value="${escapeHtmlAttr(member.name)}" data-field="name" maxlength="120" placeholder="z.B. Max Mustermann" ${isReadOnly ? 'disabled' : ''}>
             </label>
             <label class="field">
               <span>Rolle</span>
-              <input type="text" value="${escapeHtmlAttr(member.role)}" data-field="role" maxlength="80">
+              <input type="text" value="${escapeHtmlAttr(member.role)}" data-field="role" maxlength="80" placeholder="z.B. Medic / Support" ${isReadOnly ? 'disabled' : ''}>
             </label>
           </div>
-          <div class="form-row form-row-two">
-            <label class="field">
-              <span>Bild-URL</span>
-              <input type="text" value="${escapeHtmlAttr(member.image_url)}" data-field="image_url" maxlength="500">
-            </label>
-            <label class="field">
-              <span>Sortierung</span>
-              <input type="number" value="${escapeHtmlAttr(member.sort_order)}" data-field="sort_order" min="1" max="999">
-            </label>
-          </div>
+
           <label class="team-editor-toggle">
-            <input type="checkbox" data-field="is_leader" ${member.is_leader ? 'checked' : ''}>
+            <input type="checkbox" data-field="is_leader" ${member.is_leader ? 'checked' : ''} ${isReadOnly ? 'disabled' : ''}>
             <span>Zur Teamfuehrung zaehlen</span>
           </label>
+
           <label class="field">
             <span>Beschreibung</span>
-            <textarea class="upload-caption-input" maxlength="500" data-field="description" placeholder="Beschreibung fuer die Team-Seite.">${escapeHtml(member.description)}</textarea>
+            <textarea class="upload-caption-input" maxlength="500" data-field="description" placeholder="Beschreibung fuer die Team-Seite." ${isReadOnly ? 'disabled' : ''}>${escapeHtml(member.description)}</textarea>
           </label>
+
+          <details class="team-editor-advanced">
+            <summary>Erweitert</summary>
+            <div class="form-row form-row-two team-editor-advanced-body">
+              <label class="field">
+                <span>Bild-URL (optional)</span>
+                <input type="text" value="${escapeHtmlAttr(member.image_url)}" data-field="image_url" maxlength="500" placeholder="https://... oder leer lassen" ${isReadOnly ? 'disabled' : ''}>
+              </label>
+              <label class="field">
+                <span>Sortierung</span>
+                <input type="number" value="${escapeHtmlAttr(member.sort_order)}" data-field="sort_order" min="1" max="999" ${isReadOnly ? 'disabled' : ''}>
+              </label>
+            </div>
+          </details>
+
+          ${isReadOnly ? `
+            <div class="team-editor-note">Nur Admins koennen Team-Kacheln bearbeiten.</div>
+          ` : `
+            <div class="team-editor-danger">
+              <p>Entfernt die Kachel aus dem Team. Danach unbedingt auf <strong>Team speichern</strong> klicken.</p>
+              <button type="button" class="btn-danger" data-action="delete-team-member">Kachel loeschen</button>
+            </div>
+          `}
         </div>
       </div>
     </article>`).join('');
@@ -999,6 +1079,78 @@ function renderTeamMembersEditor() {
       await uploadTeamMemberImage(card?.dataset.memberId, file);
     });
   });
+
+  teamMembersEditor.querySelectorAll('[data-action="delete-team-member"]').forEach(button => {
+    button.addEventListener('click', async () => {
+      const card = button.closest('[data-member-id]');
+      await deleteTeamMember(card?.dataset.memberId);
+    });
+  });
+
+  teamMembersEditor.querySelectorAll('[data-action="move-up"]').forEach(button => {
+    button.addEventListener('click', () => {
+      const card = button.closest('[data-member-id]');
+      moveTeamMember(card?.dataset.memberId, -1);
+    });
+  });
+
+  teamMembersEditor.querySelectorAll('[data-action="move-down"]').forEach(button => {
+    button.addEventListener('click', () => {
+      const card = button.closest('[data-member-id]');
+      moveTeamMember(card?.dataset.memberId, 1);
+    });
+  });
+}
+
+function moveTeamMember(memberId, direction) {
+  if (!state.isAdmin) return;
+  if (!memberId || !direction) return;
+  const members = normalizeTeamMembers(state.teamMembers);
+  const index = members.findIndex(entry => entry.id === memberId);
+  if (index < 0) return;
+
+  const member = members[index];
+  const step = direction < 0 ? -1 : 1;
+  let otherIndex = index + step;
+  while (otherIndex >= 0 && otherIndex < members.length) {
+    if (members[otherIndex].is_leader === member.is_leader) break;
+    otherIndex += step;
+  }
+  if (otherIndex < 0 || otherIndex >= members.length) return;
+
+  const other = members[otherIndex];
+  const next = members.map(entry => {
+    if (entry.id === member.id) return { ...entry, sort_order: other.sort_order };
+    if (entry.id === other.id) return { ...entry, sort_order: member.sort_order };
+    return entry;
+  });
+
+  state.teamMembers = next;
+  renderTeamMembersEditor();
+  setMessage(teamMembersMessage, 'Reihenfolge angepasst. Bitte noch "Team speichern" klicken.', 'info');
+}
+
+async function deleteTeamMember(memberId) {
+  if (!state.isAdmin) return;
+  if (!memberId) return;
+
+  const member = state.teamMembers.find(entry => entry.id === memberId);
+  const label = member?.name ? `"${member.name}"` : memberId;
+  if (!confirm(`Teammitglied ${label} wirklich loeschen?`)) return;
+
+  const previousPath = resolveStoragePathFromPublicUrl(member?.image_url || '');
+  if (previousPath?.startsWith('team-members/')) {
+    await supabase.storage.from('photos').remove([previousPath]).catch(() => {});
+  }
+
+  state.teamMembers = normalizeTeamMembers(state.teamMembers).filter(entry => entry.id !== memberId);
+  renderTeamMembersEditor();
+  setMessage(teamMembersMessage, 'Kachel geloescht. Bitte noch "Team speichern" klicken.', 'success');
+}
+
+function generateTeamMemberId() {
+  const rand = Math.random().toString(16).slice(2, 8);
+  return `member-${Date.now().toString(16)}-${rand}`.slice(0, 40);
 }
 
 function updateTeamMemberField(memberId, field, value, inputNode = null) {
@@ -1573,4 +1725,15 @@ function escapeHtml(value) {
 
 function escapeHtmlAttr(value) {
   return escapeHtml(value).replace(/`/g, '&#96;');
+}
+
+function cssEscape(value) {
+  const raw = String(value ?? '');
+  if (window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(raw);
+
+  return raw.replace(/[^a-zA-Z0-9_-]/g, char => {
+    const code = char.codePointAt(0);
+    if (!code) return '';
+    return `\\${code.toString(16)} `;
+  });
 }

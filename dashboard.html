@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard | die Ragebaiters</title>
   <link rel="icon" type="image/png" href="images/logo.png">
-  <link rel="stylesheet" href="./styles.css?v=2026-04-23-2">
-  <link rel="stylesheet" href="./app.css?v=2026-04-23-2">
+  <link rel="stylesheet" href="./styles.css?v=2026-04-23-6">
+  <link rel="stylesheet" href="./app.css?v=2026-04-23-6">
 </head>
-<body>
+<body class="page-dashboard">
 
   <div class="top-banner">
     <img src="images/banner2.png" alt="die Ragebaiters Banner" />
@@ -52,33 +52,28 @@
     </section>
 
     <section class="section" id="mainSection" hidden>
-      <span class="eyebrow">Interner Bereich</span>
-      <div class="dashboard-header">
-        <div>
-          <h2 style="margin: 10px 0 4px;">Willkommen, <span id="hello">...</span></h2>
-          <p style="color: var(--muted); margin: 0;">Verwalte hier Uploads, Einladungen, Startseiten-Banner und Benutzer.</p>
-          <p style="color: var(--accent); margin: 8px 0 0; font-size: 0.9rem; font-weight: 700;">Dashboard-Version: 2026-04-22 Review 2</p>
+      <div class="dash-hero card">
+        <div class="dash-hero-top">
+          <div class="dash-kicker">Admin / Mitgliederbereich</div>
+          <div class="dashboard-role" id="roleBadge">Mitglied</div>
         </div>
-        <div class="dashboard-role" id="roleBadge">Mitglied</div>
+        <h1 class="dash-title">Hi <span id="hello">...</span></h1>
+        <p class="dash-subtitle">Verwalte Uploads, Team-Kacheln, Einladungen, Banner und Benutzer – alles an einem Ort.</p>
+        <div class="dash-quick">
+          <a class="dash-quick-btn" href="#welcome">Start</a>
+          <a class="dash-quick-btn role-member-up" href="#uploads">Uploads</a>
+          <a class="dash-quick-btn" href="#team">Team</a>
+          <a class="dash-quick-btn role-member-up" href="#users">Mitglieder</a>
+          <a class="dash-quick-btn role-admin-only" href="#invites">Einladungen</a>
+          <a class="dash-quick-btn role-admin-only" href="#banner">Banner</a>
+        </div>
+        <div class="dash-note" id="memberNote" hidden>
+          Dein Zugriff richtet sich nach deiner Rolle. Admin-Funktionen bleiben nur fuer Team-Admins sichtbar.
+        </div>
       </div>
 
-      <div class="dashboard-shell">
-        <aside class="dashboard-sidebar card">
-          <div class="dashboard-sidebar-title">Bereiche</div>
-          <div class="dashboard-tabs" id="dashboardTabs">
-            <button type="button" class="dashboard-tab is-active" data-view="welcome">Willkommen</button>
-            <button type="button" class="dashboard-tab role-member-up" data-view="uploads">Uploads</button>
-            <button type="button" class="dashboard-tab role-member-up" data-view="users">Mitglieder</button>
-            <button type="button" class="dashboard-tab role-admin-only" data-view="invites">Einladungscodes</button>
-            <button type="button" class="dashboard-tab role-admin-only" data-view="banner">Startseiten-Banner</button>
-            <button type="button" class="dashboard-tab" data-view="team">Team</button>
-          </div>
-          <div class="dashboard-sidebar-note" id="memberNote" hidden>
-            Dein Zugriff richtet sich nach deiner Rolle. Admin-Funktionen bleiben nur fuer Team-Admins sichtbar.
-          </div>
-        </aside>
-
-        <div class="dashboard-content">
+      <div class="dash-layout">
+        <div class="dash-main dashboard-content">
           <section class="dashboard-view is-active" id="view-welcome">
             <div class="card admin-card welcome-card">
               <div class="panel-head compact">
@@ -359,8 +354,8 @@
                 <p>Bilder, Kacheln und Verknuepfungen zu Benutzerkonten direkt hier pflegen.</p>
               </div>
               <div class="form-actions">
-                <button type="button" class="btn-secondary" id="addTeamMemberBtn">Neue Kachel</button>
-                <button type="button" class="btn-primary" id="saveTeamMembersBtn">Team speichern</button>
+                <button type="button" class="btn-secondary role-admin-only" id="addTeamMemberBtn">Neue Kachel</button>
+                <button type="button" class="btn-primary role-admin-only" id="saveTeamMembersBtn">Team speichern</button>
               </div>
             </div>
 
@@ -420,8 +415,8 @@
     <div style="font-size: 0.8rem; opacity: 0.6;">Est. 2026 • Made by sneiper0</div>
   </footer>
 
-  <script src="./nav.js?v=2026-04-23-2" defer></script>
-  <script src="./config.js?v=2026-04-23-2"></script>
-  <script type="module" src="dashboard.js?v=2026-04-23-3"></script>
+  <script src="./nav.js?v=2026-04-23-5" defer></script>
+  <script src="./config.js?v=2026-04-23-5"></script>
+  <script type="module" src="./dashboard.js?v=2026-04-23-5"></script>
 </body>
 </html>
