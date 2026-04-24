@@ -23,7 +23,8 @@ const TEST_HANDOFF_PREFIX = 'ragebaiters:test-handoff:';
 const TEST_ACCOUNT_LIFETIME_MS = 5 * 60 * 1000;
 const BANNER_OPTIONS = {
   sponsor: { src: 'images/banner.png', label: 'Sponsor' },
-  team: { src: 'images/banner2.png', label: 'Team' }
+  team: { src: 'images/banner2.png', label: 'Team' },
+  custom: { src: 'images/banner2.png', label: 'Eigenes Banner' }
 };
 
 const loadingSection = document.getElementById('loading');
@@ -62,6 +63,8 @@ const inviteUsedCount = document.getElementById('inviteUsedCount');
 const inviteTotalCount = document.getElementById('inviteTotalCount');
 
 const bannerRadios = [...document.querySelectorAll('input[name="homepageBanner"]')];
+const bannerImageInput = document.getElementById('bannerImageInput');
+const bannerCustomOptionPreview = document.getElementById('bannerCustomOptionPreview');
 const bannerPreview = document.getElementById('bannerPreview');
 const saveBannerBtn = document.getElementById('saveBannerBtn');
 const bannerMessage = document.getElementById('bannerMessage');
@@ -93,6 +96,7 @@ const state = {
   isAdmin: false,
   canUpload: false,
   canViewUsers: false,
+  bannerImageUrl: '',
   teamMembers: [],
   userDirectory: []
 };
@@ -255,6 +259,13 @@ function setupAdminActions() {
 
   bannerRadios.forEach(radio => {
     radio.addEventListener('change', () => updateBannerPreview(radio.value));
+  });
+
+  bannerImageInput?.addEventListener('change', async event => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    await uploadBannerImage(file);
   });
 
   saveBannerBtn.addEventListener('click', () => saveBannerSetting());
@@ -781,23 +792,43 @@ async function loadInvites() {
 }
 
 async function loadBannerSetting() {
-  const { data, error } = await supabase.rpc('get_homepage_banner');
+  const { data, error } = await supabase.rpc('get_homepage_banner_settings');
 
   if (error) {
     setMessage(bannerMessage, `Banner-Einstellung konnte nicht geladen werden: ${error.message}`, 'error');
+    state.bannerImageUrl = '';
+    updateCustomBannerOptionPreview();
     updateBannerPreview('team');
     return;
   }
 
-  const variant = data in BANNER_OPTIONS ? data : 'team';
+  const settings = Array.isArray(data) ? data[0] : data;
+  const variant = settings?.variant in BANNER_OPTIONS ? settings.variant : 'team';
+  state.bannerImageUrl = String(settings?.image_url || '').trim();
+  updateCustomBannerOptionPreview();
   const radio = bannerRadios.find(entry => entry.value === variant);
   if (radio) radio.checked = true;
   updateBannerPreview(variant);
 }
 
 async function saveBannerSetting() {
+  if (!state.isAdmin) {
+    setMessage(bannerMessage, 'Nur Admins können Banner speichern.', 'error');
+    return;
+  }
+
   const selected = bannerRadios.find(radio => radio.checked)?.value || 'team';
-  const { error } = await supabase.rpc('admin_set_homepage_banner', { p_variant: selected });
+  const bannerImageUrl = String(state.bannerImageUrl || '').trim();
+
+  if (selected === 'custom' && !bannerImageUrl) {
+    setMessage(bannerMessage, 'Bitte zuerst ein eigenes Banner-Bild hochladen.', 'error');
+    return;
+  }
+
+  const { error } = await supabase.rpc('admin_set_homepage_banner', {
+    p_variant: selected,
+    p_image_url: bannerImageUrl
+  });
 
   if (error) {
     setMessage(bannerMessage, `Banner konnte nicht gespeichert werden: ${error.message}`, 'error');
@@ -808,10 +839,61 @@ async function saveBannerSetting() {
   setMessage(bannerMessage, `Startseiten-Banner gespeichert: ${BANNER_OPTIONS[selected].label}`, 'success');
 }
 
+async function uploadBannerImage(file) {
+  if (!file) return;
+
+  if (!state.isAdmin) {
+    setMessage(bannerMessage, 'Nur Admins können Banner hochladen.', 'error');
+    return;
+  }
+
+  if (!ALLOWED_MIME.includes(file.type)) {
+    setMessage(bannerMessage, 'Dateityp für Banner nicht erlaubt.', 'error');
+    return;
+  }
+
+  if (file.size > MAX_BYTES) {
+    setMessage(bannerMessage, 'Banner-Bild ist zu gross (max. 8 MB).', 'error');
+    return;
+  }
+
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const key = `homepage-banner/banner-${Date.now()}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('photos')
+    .upload(key, file, { cacheControl: '3600', contentType: file.type, upsert: true });
+
+  if (uploadError) {
+    setMessage(bannerMessage, `Banner-Bild konnte nicht hochgeladen werden: ${uploadError.message}`, 'error');
+    return;
+  }
+
+  const previousPath = resolveStoragePathFromPublicUrl(state.bannerImageUrl || '');
+  if (previousPath?.startsWith('homepage-banner/') && previousPath !== key) {
+    await supabase.storage.from('photos').remove([previousPath]).catch(() => {});
+  }
+
+  const { data: publicData } = supabase.storage.from('photos').getPublicUrl(key);
+  state.bannerImageUrl = publicData.publicUrl;
+  updateCustomBannerOptionPreview();
+
+  const customRadio = bannerRadios.find(radio => radio.value === 'custom');
+  if (customRadio) customRadio.checked = true;
+  updateBannerPreview('custom');
+
+  setMessage(bannerMessage, 'Banner-Bild hochgeladen. Bitte noch auf "Banner speichern" klicken.', 'success');
+}
+
 function updateBannerPreview(variant) {
   const config = BANNER_OPTIONS[variant] || BANNER_OPTIONS.team;
-  bannerPreview.src = config.src;
+  bannerPreview.src = resolveBannerImage(variant);
   bannerPreview.alt = `${config.label} Banner Vorschau`;
+}
+
+function updateCustomBannerOptionPreview() {
+  if (!bannerCustomOptionPreview) return;
+  bannerCustomOptionPreview.src = resolveBannerImage('custom');
 }
 
 async function loadInstagramSettings() {
@@ -1100,6 +1182,14 @@ function defaultTeamMembers() {
 
 function resolveTeamMemberImage(path) {
   return path || 'images/logo.png';
+}
+
+function resolveBannerImage(variant) {
+  if (variant === 'custom' && state.bannerImageUrl) {
+    return state.bannerImageUrl;
+  }
+
+  return (BANNER_OPTIONS[variant] || BANNER_OPTIONS.team).src;
 }
 
 function resolveStoragePathFromPublicUrl(url) {

@@ -2027,3 +2027,107 @@ begin
   return found;
 end;
 $$;
+
+-- ============================================================
+-- Homepage Banner Custom Upload
+-- ============================================================
+
+insert into public.site_settings (key, value_text)
+values ('homepage_banner_image_url', '')
+on conflict (key) do nothing;
+
+drop function if exists public.get_homepage_banner_settings();
+
+create or replace function public.get_homepage_banner()
+returns text
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select case
+    when coalesce((select value_text from public.site_settings where key = 'homepage_banner_variant'), 'team') in ('sponsor', 'team', 'custom')
+      then coalesce((select value_text from public.site_settings where key = 'homepage_banner_variant'), 'team')
+    else 'team'
+  end;
+$$;
+
+create or replace function public.get_homepage_banner_settings()
+returns table (
+  variant text,
+  image_url text
+)
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select
+    case
+      when coalesce((select value_text from public.site_settings where key = 'homepage_banner_variant'), 'team') in ('sponsor', 'team', 'custom')
+        then coalesce((select value_text from public.site_settings where key = 'homepage_banner_variant'), 'team')
+      else 'team'
+    end as variant,
+    coalesce((select value_text from public.site_settings where key = 'homepage_banner_image_url'), '') as image_url;
+$$;
+
+create or replace function public.admin_set_homepage_banner(
+  p_variant text,
+  p_image_url text default ''
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_variant text := lower(trim(coalesce(p_variant, 'team')));
+  v_image_url text := trim(coalesce(p_image_url, ''));
+begin
+  if not public.is_admin() then
+    raise exception 'Nur Admins duerfen das Startseiten-Banner aendern.';
+  end if;
+
+  if v_variant not in ('sponsor', 'team', 'custom') then
+    raise exception 'Ungueltige Banner-Variante: %', v_variant;
+  end if;
+
+  if v_variant = 'custom' and v_image_url = '' then
+    raise exception 'Fuer das eigene Banner muss zuerst ein Bild hochgeladen werden.';
+  end if;
+
+  insert into public.site_settings (key, value_text, updated_at, updated_by)
+  values
+    ('homepage_banner_variant', v_variant, now(), auth.uid()),
+    ('homepage_banner_image_url', v_image_url, now(), auth.uid())
+  on conflict (key) do update
+    set value_text = excluded.value_text,
+        updated_at = excluded.updated_at,
+        updated_by = excluded.updated_by;
+
+  return true;
+end;
+$$;
+
+create or replace function public.admin_set_homepage_banner(p_variant text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_image_url text;
+begin
+  select coalesce(value_text, '')
+  into v_image_url
+  from public.site_settings
+  where key = 'homepage_banner_image_url';
+
+  return public.admin_set_homepage_banner(p_variant, v_image_url);
+end;
+$$;
+
+grant execute on function public.get_homepage_banner() to anon, authenticated;
+grant execute on function public.get_homepage_banner_settings() to anon, authenticated;
+grant execute on function public.admin_set_homepage_banner(text) to authenticated;
+grant execute on function public.admin_set_homepage_banner(text, text) to authenticated;
