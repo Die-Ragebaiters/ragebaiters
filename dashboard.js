@@ -21,6 +21,7 @@ const helloEl = document.getElementById('hello');
 const roleBadge = document.getElementById('roleBadge');
 const memberNote = document.getElementById('memberNote');
 const tabButtons = [...document.querySelectorAll('.dashboard-tab')];
+const quickButtons = [...document.querySelectorAll('.dash-quick-btn[data-view-link]')];
 const viewSections = [...document.querySelectorAll('.dashboard-view')];
 const adminOnlyNodes = [...document.querySelectorAll('.role-admin-only, .role-admin-view')];
 const memberUpNodes = [...document.querySelectorAll('.role-member-up, .role-member-up-view')];
@@ -139,6 +140,15 @@ function setupNavigation() {
     });
   });
 
+  quickButtons.forEach(btn => {
+    btn.addEventListener('click', event => {
+      event.preventDefault();
+      if (btn.classList.contains('role-admin-only') && !state.isAdmin) return;
+      if (btn.classList.contains('role-member-up') && !state.canUpload && !state.canViewUsers) return;
+      setActiveView(btn.dataset.viewLink);
+    });
+  });
+
   const initialView = normalizeView((location.hash || '').replace('#', ''));
   setActiveView(initialView);
   window.addEventListener('hashchange', () => {
@@ -160,6 +170,11 @@ function setActiveView(view) {
     const isActive = btn.dataset.view === safeView;
     btn.classList.toggle('is-active', isActive);
     btn.setAttribute('aria-pressed', String(isActive));
+  });
+  quickButtons.forEach(btn => {
+    const isActive = btn.dataset.viewLink === safeView;
+    btn.classList.toggle('is-active', isActive);
+    btn.setAttribute('aria-current', isActive ? 'page' : 'false');
   });
   viewSections.forEach(section => {
     section.hidden = section.id !== `view-${safeView}`;

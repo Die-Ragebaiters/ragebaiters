@@ -5,18 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard | die Ragebaiters</title>
   <link rel="icon" type="image/png" href="images/logo.png">
-  <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="styles.css?v=2026-04-26-dashboard-visual-1">
+  <link rel="stylesheet" href="app.css?v=2026-04-26-dashboard-visual-1">
 </head>
-<body>
+<body class="page-dashboard">
 
   <div class="top-banner">
     <img src="images/banner2.png" alt="die Ragebaiters Banner" />
   </div>
 
+  <div class="nav-backdrop" aria-hidden="true"></div>
+
   <header class="container">
     <nav class="nav">
-      <div style="font-weight: 900; font-size: 1.6rem;">die Ragebaiters</div>
+      <div class="nav-brand">
+        <div class="nav-title">die Ragebaiters</div>
+      </div>
       <div class="nav-links">
         <a href="index.html">Startseite</a>
         <a href="team.html">Team</a>
@@ -43,16 +47,27 @@
       Lade Dashboard...
     </section>
 
-    <section class="section" id="mainSection" hidden>
-      <span class="eyebrow">Interner Bereich</span>
-      <div class="dashboard-header">
-        <div>
-          <h2 style="margin: 10px 0 4px;">Willkommen, <span id="hello">...</span></h2>
-          <p style="color: var(--muted); margin: 0;">Verwalte hier Uploads, Einladungen, Startseiten-Banner, Teamdaten und Benutzer.</p>
-          <p style="color: var(--accent); margin: 8px 0 0; font-size: 0.9rem; font-weight: 700;">Dashboard-Version: 2026-04-26 Team Update</p>
+    <section class="section dashboard-page" id="mainSection" hidden>
+      <section class="dash-hero card">
+        <div class="dash-hero-top">
+          <div class="dash-hero-copy">
+            <span class="eyebrow dash-kicker">Interner Bereich</span>
+            <h1 class="dash-title">Willkommen, <span id="hello">...</span></h1>
+            <p class="dash-subtitle">Verwalte hier Uploads, Einladungen, Startseiten-Banner, Teamdaten und Benutzer.</p>
+          </div>
+          <div class="dashboard-role" id="roleBadge">Mitglied</div>
         </div>
-        <div class="dashboard-role" id="roleBadge">Mitglied</div>
-      </div>
+
+        <div class="dash-quick">
+          <a href="#welcome" class="dash-quick-btn is-active" data-view-link="welcome">Willkommen</a>
+          <a href="#uploads" class="dash-quick-btn role-member-up" data-view-link="uploads">Uploads</a>
+          <a href="#users" class="dash-quick-btn role-member-up" data-view-link="users">Mitglieder</a>
+          <a href="#invites" class="dash-quick-btn role-admin-only" data-view-link="invites">Einladungscodes</a>
+          <a href="#banner" class="dash-quick-btn role-admin-only" data-view-link="banner">Banner</a>
+        </div>
+
+        <p class="dash-note">Dashboard-Version: 2026-04-26 Team Update</p>
+      </section>
 
       <div class="dashboard-shell">
         <aside class="dashboard-sidebar card">
@@ -320,6 +335,6 @@
   </footer>
 
   <script src="config.js"></script>
-  <script type="module" src="dashboard.js?v=2026-04-26-2"></script>
+  <script type="module" src="dashboard.js?v=2026-04-26-3"></script>
 </body>
 </html>
