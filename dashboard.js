@@ -182,6 +182,7 @@ function setupNavigation() {
 
 function setupTeamMembersEditorActions() {
   addTeamMemberBtn?.addEventListener('click', () => addTeamMember());
+  saveTeamMembersBtn?.addEventListener('click', () => saveTeamMembers());
 }
 
 function normalizeView(view) {
@@ -1178,6 +1179,10 @@ function updateTeamMemberField(memberId, field, value, inputNode = null) {
   if (field === 'is_leader' || field === 'sort_order') {
     renderTeamMembersEditor();
   }
+
+  if (field === 'is_leader' && state.isAdmin) {
+    saveTeamMembers();
+  }
 }
 
 async function uploadTeamMemberImage(memberId, file) {
@@ -1214,7 +1219,12 @@ async function uploadTeamMemberImage(memberId, file) {
   const { data: publicData } = supabase.storage.from('photos').getPublicUrl(key);
   updateTeamMemberField(memberId, 'image_url', publicData.publicUrl);
   renderTeamMembersEditor();
-  setMessage(teamMembersMessage, 'Team-Bild hochgeladen. Bitte noch auf "Team speichern" klicken.', 'success');
+  setMessage(teamMembersMessage, 'Team-Bild hochgeladen. Speichere Team-Daten...', 'info');
+  if (state.isAdmin) {
+    await saveTeamMembers();
+    return;
+  }
+  setMessage(teamMembersMessage, 'Team-Bild hochgeladen.', 'success');
 }
 
 function normalizeTeamMembers(rawMembers) {
