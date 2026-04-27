@@ -3,41 +3,60 @@
     window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const root = document.documentElement;
+  let revealObserver = null;
 
-  const enhanceElements = () => {
-    const liquidSelectors = [
-      '.nav',
-      '.card',
-      '.info-box',
-      '.auth-card',
-      '.imp-card',
-      '.upload-card',
-      '.upload-dropzone',
-      '.stat-card',
-      '.capability-card',
-      '.admin-card',
-      '.photo-item',
-      '.member-card',
-      '.dash-hero',
-      '.data-table'
-    ];
+  const liquidSelectors = [
+    '.nav',
+    '.card',
+    '.info-box',
+    '.auth-card',
+    '.imp-card',
+    '.upload-card',
+    '.upload-dropzone',
+    '.stat-card',
+    '.capability-card',
+    '.admin-card',
+    '.team-editor-card',
+    '.photo-item',
+    '.member-card',
+    '.dash-hero',
+    '.data-table'
+  ];
 
-    document.querySelectorAll(liquidSelectors.join(',')).forEach((el) => {
+  const revealSelectors = [
+    '.hero',
+    '.section',
+    '.footer',
+    '.auth-wrap',
+    '.dash-hero',
+    '.admin-card',
+    '.upload-card',
+    '.stat-card'
+  ];
+
+  const liquidSelector = liquidSelectors.join(',');
+  const revealSelector = revealSelectors.join(',');
+
+  const mark = (scope) => {
+    const rootEl = scope && scope.nodeType === 1 ? scope : null;
+    const nodes = [];
+    if (rootEl && rootEl.matches(liquidSelector)) nodes.push(rootEl);
+    if (scope && scope.querySelectorAll) nodes.push(...scope.querySelectorAll(liquidSelector));
+    nodes.forEach((el) => {
       el.dataset.liquid = '1';
     });
 
-    // Progressive reveal only when JS is available.
-    const revealSelectors = [
-      '.hero',
-      '.section',
-      '.footer',
-      '.auth-wrap',
-      '.dash-hero',
-      '.admin-card',
-      '.upload-card',
-      '.stat-card'
-    ];
-    document.querySelectorAll(revealSelectors.join(',')).forEach((el) => el.classList.add('reveal'));
+    const revealNodes = [];
+    if (rootEl && rootEl.matches(revealSelector)) revealNodes.push(rootEl);
+    if (scope && scope.querySelectorAll) revealNodes.push(...scope.querySelectorAll(revealSelector));
+    revealNodes.forEach((el) => {
+      el.classList.add('reveal');
+      if (revealObserver && !prefersReduce) revealObserver.observe(el);
+    });
+  };
+
+  const enhanceElements = () => {
+    mark(document);
   };
 
   const initReveal = () => {
@@ -46,19 +65,19 @@
       return;
     }
 
-    const io = new IntersectionObserver(
+    revealObserver = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting) {
             entry.target.classList.add('is-in');
-            io.unobserve(entry.target);
+            revealObserver.unobserve(entry.target);
           }
         }
       },
       { root: null, threshold: 0.12, rootMargin: '60px 0px' }
     );
 
-    document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+    document.querySelectorAll('.reveal').forEach((el) => revealObserver.observe(el));
   };
 
   const initPointer = () => {
@@ -113,16 +132,32 @@
     );
   };
 
+  const initObserver = () => {
+    if (!('MutationObserver' in window)) return;
+
+    const mo = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of mutation.addedNodes || []) {
+          if (!node || node.nodeType !== 1) continue;
+          mark(node);
+        }
+      }
+    });
+
+    mo.observe(document.documentElement, { childList: true, subtree: true });
+  };
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       enhanceElements();
       initReveal();
       initPointer();
+      initObserver();
     });
   } else {
     enhanceElements();
     initReveal();
     initPointer();
+    initObserver();
   }
 })();
-

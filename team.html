@@ -63,22 +63,22 @@
       <div id="teamLeaderSection">
         <h3 style="color: var(--accent); margin-bottom: 20px;">Teamfuehrung</h3>
         <div id="teamLeaderGrid" class="member-grid" style="grid-template-columns: 1fr;">
-          <div class="card" style="text-align:center; color: var(--muted);">Team wird geladen...</div>
+          <div class="card empty-state">Team wird geladen...</div>
         </div>
       </div>
 
       <div id="teamOperatorSection">
         <h3 style="margin: 40px 0 20px;">Operatoren</h3>
         <div id="teamOperatorGrid" class="member-grid">
-          <div class="card" style="text-align:center; color: var(--muted);">Team wird geladen...</div>
+          <div class="card empty-state">Team wird geladen...</div>
         </div>
       </div>
     </section>
   </main>
 
   <footer class="footer container">
-    <div style="font-weight: 800;">die Ragebaiters</div>
-    <div style="font-size: 0.8rem; opacity: 0.6;">Est. 2026 - Made by sneiper0</div>
+    <div class="footer-brand">die Ragebaiters</div>
+    <div class="footer-meta">Est. 2026 • Made by sneiper0</div>
   </footer>
 
   <script src="./nav.js?v=2026-04-27-1" defer></script>
@@ -137,11 +137,11 @@
 
       leaderGrid.innerHTML = leaders.length
         ? leaders.map(member => memberCardMarkup(member, true)).join('')
-        : '<div class="card" style="text-align:center; color: var(--muted);">Noch keine Teamfuehrung hinterlegt.</div>';
+        : '<div class="card empty-state">Noch keine Teamfuehrung hinterlegt.</div>';
 
       operatorGrid.innerHTML = operators.length
         ? operators.map(member => memberCardMarkup(member, false)).join('')
-        : '<div class="card" style="text-align:center; color: var(--muted);">Noch keine Operatoren hinterlegt.</div>';
+        : '<div class="card empty-state">Noch keine Operatoren hinterlegt.</div>';
 
       [...leaderGrid.querySelectorAll('.member-card'), ...operatorGrid.querySelectorAll('.member-card')].forEach(card => {
         card.addEventListener('click', () => {

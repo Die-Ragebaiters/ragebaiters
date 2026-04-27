@@ -522,7 +522,7 @@ async function loadMyPhotos() {
   countEl.textContent = data.length;
 
   if (!data.length) {
-    myPhotos.innerHTML = '<div class="card" style="text-align:center; color: var(--muted);">Noch keine Bilder hochgeladen.</div>';
+    myPhotos.innerHTML = '<div class="card empty-state">Noch keine Bilder hochgeladen.</div>';
     return;
   }
 
@@ -542,13 +542,13 @@ async function loadMyPhotos() {
       <a href="${publicUrl}" target="_blank" rel="noopener">
         <img src="${publicUrl}" alt="${escapeHtml(photo.title || '')}" loading="lazy">
       </a>
+      ${actions}
       <figcaption>
         <div class="photo-copy">
           <span>${escapeHtml(photo.title || '')}</span>
           ${photo.caption ? `<small>${escapeHtml(photo.caption)}</small>` : ''}
           <small>Status: ${escapeHtml(photoStatusLabel(photo.visibility))}</small>
         </div>
-        ${actions}
       </figcaption>`;
 
     grid.appendChild(fig);
@@ -584,7 +584,7 @@ async function loadMyPhotos() {
 async function loadPendingReviews() {
   if (!state.isAdmin || !pendingReviews) return;
 
-  pendingReviews.innerHTML = '<div class="card" style="text-align:center; color: var(--muted);">Pruefe Uploads...</div>';
+  pendingReviews.innerHTML = '<div class="card empty-state">Pruefe Uploads...</div>';
 
   const { data, error } = await supabase
     .from('photos')
@@ -598,7 +598,7 @@ async function loadPendingReviews() {
   }
 
   if (!data?.length) {
-    pendingReviews.innerHTML = '<div class="card" style="text-align:center; color: var(--muted);">Keine Uploads warten auf Freigabe.</div>';
+    pendingReviews.innerHTML = '<div class="card empty-state">Keine Uploads warten auf Freigabe.</div>';
     return;
   }
 

@@ -92,8 +92,8 @@
   </main>
 
   <footer class="footer container">
-    <div style="font-weight: 800;">die Ragebaiters</div>
-    <div style="font-size: 0.8rem; opacity: 0.6;">Est. 2026 • Made by sneiper0</div>
+    <div class="footer-brand">die Ragebaiters</div>
+    <div class="footer-meta">Est. 2026 • Made by sneiper0</div>
   </footer>
 
   <script src="./nav.js?v=2026-04-27-1" defer></script>
@@ -101,7 +101,7 @@
   <script src="./config.js?v=2026-04-27-1"></script>
   <script type="module">
     import { supabase, initPage, getSessionUser, buildScopedUrl, waitForSessionUser, rememberPendingSession } from './auth.js?v=2026-04-23-1';
-    await initPage('login');
+    await initPage('register');
 
     if (await getSessionUser()) location.href = buildScopedUrl('dashboard.html');
 

@@ -127,9 +127,78 @@ video {
   display: block;
 }
 
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
 a {
   color: inherit;
   text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: rgba(183, 255, 60, 0.28);
+  color: rgba(255, 255, 255, 0.96);
+}
+
+hr {
+  border: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.14), transparent);
+  opacity: 0.9;
+  margin: 22px 0;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding-left: 1.2em;
+  color: var(--muted);
+}
+
+li + li {
+  margin-top: 6px;
+}
+
+small {
+  color: rgba(255, 255, 255, 0.64);
+}
+
+kbd,
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.92em;
+}
+
+code {
+  padding: 0.15em 0.35em;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+table {
+  width: 100%;
 }
 
 a:focus-visible,
@@ -230,6 +299,7 @@ p {
 .stat-card,
 .capability-card,
 .admin-card,
+.team-editor-card,
 .upload-dropzone,
 .lightbox,
 .photo-item,
@@ -391,6 +461,16 @@ header.container {
   background: rgba(183, 255, 60, 0.10);
   color: rgba(255, 255, 255, 0.92);
   font-weight: 850;
+}
+
+.nav-dashboard-link {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.nav-dashboard-link:hover {
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.24);
 }
 
 .nav-login-dot {
@@ -922,6 +1002,8 @@ body.nav-lock {
 
 .btn-primary,
 .btn-secondary,
+.btn-tertiary,
+.btn-danger,
 .btn-delete,
 .dash-quick-btn {
   appearance: none;
@@ -931,7 +1013,9 @@ body.nav-lock {
 }
 
 .btn-primary,
-.btn-secondary {
+.btn-secondary,
+.btn-tertiary,
+.btn-danger {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -957,15 +1041,47 @@ body.nav-lock {
   color: rgba(255, 255, 255, 0.86);
 }
 
+.btn-tertiary {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.82);
+  padding: 10px 12px;
+  font-weight: 820;
+  font-size: 0.9rem;
+}
+
+.btn-danger {
+  border: 1px solid rgba(255, 59, 48, 0.34);
+  background: rgba(255, 59, 48, 0.10);
+  color: rgba(255, 255, 255, 0.92);
+  padding: 10px 12px;
+  font-weight: 860;
+  font-size: 0.9rem;
+}
+
 .btn-primary:hover,
-.btn-secondary:hover {
+.btn-secondary:hover,
+.btn-tertiary:hover,
+.btn-danger:hover {
   transform: translateY(-1px);
   filter: brightness(1.03);
 }
 
 .btn-primary:active,
-.btn-secondary:active {
+.btn-secondary:active,
+.btn-tertiary:active,
+.btn-danger:active {
   transform: translateY(0);
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-tertiary:disabled,
+.btn-danger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none !important;
+  filter: none !important;
 }
 
 .btn-delete {
@@ -986,6 +1102,59 @@ body.nav-lock {
   transform: translateY(-1px);
   background: rgba(255, 59, 48, 0.16);
   border-color: rgba(255, 59, 48, 0.35);
+}
+
+/* Small utility actions + pills (dashboard + cards) */
+.table-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.86);
+  font-weight: 820;
+  font-size: 0.86rem;
+  white-space: nowrap;
+}
+
+.status-pill::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.status-pill.open::before {
+  background: rgba(183, 255, 60, 0.78);
+  box-shadow: 0 0 18px rgba(183, 255, 60, 0.14);
+}
+
+.status-pill.used::before {
+  background: rgba(255, 255, 255, 0.40);
+}
+
+.status-pill.role-admin {
+  border-color: rgba(183, 255, 60, 0.26);
+  background: rgba(183, 255, 60, 0.10);
+}
+
+.status-pill.role-member {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.status-pill.role-observer {
+  border-color: rgba(102, 255, 184, 0.22);
+  background: rgba(102, 255, 184, 0.08);
 }
 
 /* ------------------------------------------------------------
@@ -1503,6 +1672,17 @@ body.nav-lock {
   position: relative;
 }
 
+.footer-brand {
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.footer-meta {
+  font-size: 0.86rem;
+  color: rgba(255, 255, 255, 0.62);
+}
+
 .footer::before {
   content: "";
   position: absolute;
@@ -1529,6 +1709,16 @@ body.nav-lock {
 .alert-error {
   border-color: rgba(255, 59, 48, 0.35);
   background: rgba(255, 59, 48, 0.10);
+}
+
+.empty-state {
+  padding: 18px 16px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.70);
+}
+
+.empty-state strong {
+  color: rgba(255, 255, 255, 0.92);
 }
 
 /* ------------------------------------------------------------

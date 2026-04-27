@@ -189,12 +189,16 @@ function setupMobileNav() {
   const navLinks = nav?.querySelector('.nav-links');
   if (!nav || !navLinks || nav.dataset.mobileReady === '1') return;
 
+  // Wenn bereits ein Nav-Toggle existiert (nav.js), keine DOM-Umbauten durchfuehren.
+  if (nav.querySelector('.nav-toggle') || document.querySelector('.nav-backdrop')) {
+    nav.dataset.mobileReady = '1';
+    return;
+  }
+
   nav.dataset.mobileReady = '1';
 
   const titleEl = nav.firstElementChild;
   if (titleEl) {
-    titleEl.classList.add('nav-title');
-
     if (!titleEl.parentElement?.classList.contains('nav-brand')) {
       const brand = document.createElement('div');
       brand.className = 'nav-brand';
@@ -265,7 +269,7 @@ export async function renderAuthNav(active = '') {
 
   const user = await getSessionUser();
 
-  if (nav && !user) {
+  if (nav && !user && active !== 'login') {
     const firstSocial = nav.querySelector('.social-icon');
     const login = document.createElement('a');
     login.href = buildScopedUrl('login.html');
@@ -283,19 +287,17 @@ export async function renderAuthNav(active = '') {
 
   if (nav && user) {
     const firstSocial = nav.querySelector('.social-icon');
-    const wrap = document.createElement('div');
-    wrap.dataset.authLink = '1';
-    wrap.className = 'floating-login-wrap';
-    wrap.innerHTML = `
-      <a class="floating-login" href="${escapeAttr(buildScopedUrl('login.html'))}" title="Interner Login" aria-label="Interner Login">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <rect x="3" y="11" width="18" height="11" rx="2"/>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-        </svg>
-        <span class="sr-only">Interner Login</span>
-      </a>`;
-    document.body.appendChild(wrap);
+    const dashboard = document.createElement('a');
+    dashboard.href = buildScopedUrl('dashboard.html');
+    dashboard.className = 'nav-login-link nav-dashboard-link';
+    dashboard.dataset.authLink = '1';
+    dashboard.title = 'Dashboard';
+    dashboard.setAttribute('aria-label', 'Dashboard');
+    dashboard.innerHTML = `
+      <span class="nav-login-dot" aria-hidden="true"></span>
+      <span class="nav-login-copy">Dashboard</span>`;
+    if (firstSocial) nav.insertBefore(dashboard, firstSocial);
+    else nav.appendChild(dashboard);
 
     const logout = document.createElement('a');
     logout.href = '#';
@@ -309,7 +311,8 @@ export async function renderAuthNav(active = '') {
       await supabase.auth.signOut();
       location.href = currentSessionScope ? buildScopedUrl('login.html') : 'index.html';
     });
-    nav.insertBefore(logout, firstSocial);
+    if (firstSocial) nav.insertBefore(logout, firstSocial);
+    else nav.appendChild(logout);
   }
 }
 

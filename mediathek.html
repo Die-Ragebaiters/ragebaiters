@@ -67,8 +67,8 @@
   </main>
 
   <footer class="footer container">
-    <div style="font-weight: 800;">die Ragebaiters</div>
-    <div style="font-size: 0.8rem; opacity: 0.6;">Est. 2026 • Made by sneiper0</div>
+    <div class="footer-brand">die Ragebaiters</div>
+    <div class="footer-meta">Est. 2026 • Made by sneiper0</div>
   </footer>
 
   <script src="./nav.js?v=2026-04-27-1" defer></script>
@@ -93,7 +93,7 @@
     if (error) {
       gallery.innerHTML = '<div class="alert alert-error">' + escapeHtml(error.message) + '</div>';
     } else if (!photos.length) {
-      gallery.innerHTML = '<div class="card" style="text-align:center; color: var(--muted);">Es wurden noch keine Fotos hochgeladen.</div>';
+      gallery.innerHTML = '<div class="card empty-state">Es wurden noch keine Fotos hochgeladen.</div>';
     } else {
       const grid = document.createElement('div');
       grid.className = 'photo-grid lightbox-grid';
@@ -137,7 +137,7 @@
             if (!deleted) return alert('Bild konnte nicht geloescht werden.');
             fig.remove();
             if (!grid.querySelector('.photo-item')) {
-              gallery.innerHTML = '<div class="card" style="text-align:center; color: var(--muted);">Es wurden noch keine Fotos hochgeladen.</div>';
+              gallery.innerHTML = '<div class="card empty-state">Es wurden noch keine Fotos hochgeladen.</div>';
             }
           });
         });
