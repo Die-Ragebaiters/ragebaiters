@@ -1485,7 +1485,14 @@ async function loadUsers() {
   let { data, error } = await supabase.rpc(rpcName);
   let usedMembersFallback = false;
 
-  if (state.isAdmin && error && /could not find the function public\.admin_list_users/i.test(String(error.message || ''))) {
+  const adminListUsersMissing = state.isAdmin && error && (
+    String(error.code || '').toUpperCase() === 'PGRST202'
+    || /could not find the function public\.admin_list_users/i.test(String(error.message || ''))
+    || /admin_list_users/i.test(String(error.details || ''))
+    || /admin_list_users/i.test(String(error.hint || ''))
+  );
+
+  if (adminListUsersMissing) {
     const fallback = await supabase.rpc('dashboard_list_members');
     data = fallback.data;
     error = fallback.error;
