@@ -1218,8 +1218,13 @@ async function uploadTeamMemberImage(memberId, file) {
   }
 
   const member = state.teamMembers.find(entry => entry.id === memberId);
+  const userId = String(state.user?.id || '').trim();
+  if (!userId) {
+    setMessage(teamMembersMessage, 'Team-Bild konnte nicht hochgeladen werden: Session ungueltig (fehlende User-ID). Bitte neu einloggen.', 'error');
+    return;
+  }
   const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
-  const key = `${state.user?.id || 'team'}/team-members/${slugify(member?.name || memberId)}-${Date.now()}.${ext}`;
+  const key = `${userId}/team-members/${slugify(member?.name || memberId)}-${Date.now()}.${ext}`;
 
   const { error: uploadError } = await supabase.storage
     .from('photos')
@@ -1477,7 +1482,15 @@ async function loadUsers() {
   }
 
   const rpcName = state.isAdmin ? 'admin_list_users' : 'dashboard_list_members';
-  const { data, error } = await supabase.rpc(rpcName);
+  let { data, error } = await supabase.rpc(rpcName);
+  let usedMembersFallback = false;
+
+  if (state.isAdmin && error && /could not find the function public\.admin_list_users/i.test(String(error.message || ''))) {
+    const fallback = await supabase.rpc('dashboard_list_members');
+    data = fallback.data;
+    error = fallback.error;
+    usedMembersFallback = !fallback.error;
+  }
 
   if (error) {
     const colspan = state.isAdmin ? 6 : 3;
@@ -1494,14 +1507,30 @@ async function loadUsers() {
     return;
   }
 
-  if (!state.isAdmin) {
+  if (!state.isAdmin || usedMembersFallback) {
+    if (usedMembersFallback) {
+      userTableHead.innerHTML = `
+        <tr>
+          <th>Benutzer</th>
+          <th>Rolle</th>
+          <th>Mitglied seit</th>
+        </tr>`;
+      setMessage(
+        userMessage,
+        'Admin-Benutzerliste ist in der Datenbank nicht verfuegbar. Es wird die Mitglieder-Ansicht angezeigt.',
+        'info'
+      );
+    }
+
     userRows.innerHTML = users.map(entry => `
       <tr>
         <td>${escapeHtml(entry.username || 'Unbekannt')}</td>
         <td><span class="status-pill role-${normalizeRole(entry.role)}">${roleLabel(entry.role)}</span></td>
         <td>${formatDateTime(entry.created_at)}</td>
       </tr>`).join('');
-    setMessage(userMessage, '', 'info', true);
+    if (!usedMembersFallback) {
+      setMessage(userMessage, '', 'info', true);
+    }
     return;
   }
 
