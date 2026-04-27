@@ -95,7 +95,9 @@ const state = {
   canUpload: false,
   canViewUsers: false,
   teamMembers: [],
-  userDirectory: []
+  userDirectory: [],
+  teamUploadSuccessByMember: {},
+  teamSavePending: false
 };
 const currentSessionScope = getCurrentSessionScope();
 const isTemporaryTestSession = currentSessionScope === TEST_ACCOUNT_SCOPE
@@ -902,27 +904,43 @@ async function loadTeamMembers() {
 }
 
 async function saveTeamMembers() {
+  if (state.teamSavePending) return false;
+  setTeamSavePending(true);
+
+  try {
   if (!state.isAdmin) {
     setMessage(teamMembersMessage, 'Nur Admins koennen Team-Kacheln speichern.', 'error');
-    return;
+    return false;
   }
 
   const payload = normalizeTeamMembers(state.teamMembers);
 
   if (!payload.length) {
     setMessage(teamMembersMessage, 'Bitte mindestens ein Team-Mitglied hinterlegen.', 'error');
-    return;
+    return false;
   }
 
   const { error } = await supabase.rpc('admin_set_team_members', { p_members: payload });
   if (error) {
     setMessage(teamMembersMessage, `Team konnte nicht gespeichert werden: ${error.message}`, 'error');
-    return;
+    return false;
   }
 
   state.teamMembers = payload;
   renderTeamMembersEditor();
   setMessage(teamMembersMessage, 'Team-Daten gespeichert.', 'success');
+  return true;
+  } finally {
+    setTeamSavePending(false);
+  }
+}
+
+function setTeamSavePending(isPending) {
+  state.teamSavePending = Boolean(isPending);
+  if (!saveTeamMembersBtn) return;
+
+  saveTeamMembersBtn.disabled = state.teamSavePending;
+  saveTeamMembersBtn.textContent = state.teamSavePending ? 'Wird gespeichert...' : 'Team speichern';
 }
 
 function addTeamMember() {
@@ -993,6 +1011,7 @@ function renderTeamMembersEditor() {
         <div class="team-editor-badges" aria-label="Metadaten">
           <span class="team-editor-badge ${member.is_leader ? 'is-leader' : ''}">${member.is_leader ? 'Teamfuehrung' : 'Operator'}</span>
           <span class="team-editor-badge">${member.image_url ? 'Bild gesetzt' : 'Kein Bild'}</span>
+          ${state.teamUploadSuccessByMember[member.id] ? '<span class="team-editor-badge is-success">Upload gespeichert</span>' : ''}
         </div>
       </div>
 
@@ -1216,12 +1235,19 @@ async function uploadTeamMemberImage(memberId, file) {
     await supabase.storage.from('photos').remove([previousPath]).catch(() => {});
   }
 
-  const { data: publicData } = supabase.storage.from('photos').getPublicUrl(key);
-  updateTeamMemberField(memberId, 'image_url', publicData.publicUrl);
+  // Persist only the storage key for stable cross-environment rendering.
+  updateTeamMemberField(memberId, 'image_url', key);
   renderTeamMembersEditor();
   setMessage(teamMembersMessage, 'Team-Bild hochgeladen. Speichere Team-Daten...', 'info');
   if (state.isAdmin) {
-    await saveTeamMembers();
+    const saved = await saveTeamMembers();
+    if (!saved) return;
+    state.teamUploadSuccessByMember[memberId] = true;
+    renderTeamMembersEditor();
+    window.setTimeout(() => {
+      delete state.teamUploadSuccessByMember[memberId];
+      renderTeamMembersEditor();
+    }, 5000);
     return;
   }
   setMessage(teamMembersMessage, 'Team-Bild hochgeladen.', 'success');
@@ -1261,12 +1287,25 @@ function defaultTeamMembers() {
 }
 
 function resolveTeamMemberImage(path) {
-  return path || 'images/logo.png';
+  const normalized = String(path || '').trim();
+  if (!normalized) return 'images/logo.png';
+  if (/^https?:\/\//i.test(normalized)) return normalized;
+
+  if (normalized.startsWith('team-members/')) {
+    const { data: publicData } = supabase.storage.from('photos').getPublicUrl(normalized);
+    const cacheBust = `t=${Date.now()}`;
+    const separator = publicData.publicUrl.includes('?') ? '&' : '?';
+    return `${publicData.publicUrl}${separator}${cacheBust}`;
+  }
+
+  return normalized;
 }
 
 function resolveStoragePathFromPublicUrl(url) {
   const normalized = String(url || '').trim();
-  if (!normalized || !window.SUPABASE_URL) return '';
+  if (!normalized) return '';
+  if (normalized.startsWith('team-members/')) return normalized;
+  if (!window.SUPABASE_URL) return '';
 
   try {
     const publicPrefix = `${new URL(window.SUPABASE_URL).origin}/storage/v1/object/public/photos/`;

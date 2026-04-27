@@ -156,6 +156,11 @@
     function memberCardMarkup(member, isLeader) {
       return `
         <div class="member-card" data-member-id="${escapeHtmlAttr(member.id)}" ${isLeader ? 'style="border: 2px solid var(--accent);"' : ''}>
+          <img
+            src="${escapeHtmlAttr(resolveTeamImage(member.image_url))}"
+            alt="${escapeHtmlAttr(member.name || 'Teammitglied')}"
+            style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.16);margin:0 auto 12px;display:block;"
+            onerror="this.src='images/logo.png'">
           <div class="role-badge">${escapeHtml(member.role || (isLeader ? 'Teamfuehrung' : 'Operator'))}</div>
           <div style="${isLeader ? 'font-size: 1.8rem; font-weight: 900;' : 'font-weight:800;'}">${escapeHtml(member.name || 'Unbekannt')}</div>
         </div>`;
@@ -175,7 +180,16 @@
     }
 
     function resolveTeamImage(imageUrl) {
-      return String(imageUrl || '').trim() || 'images/logo.png';
+      const normalized = String(imageUrl || '').trim();
+      if (!normalized) return 'images/logo.png';
+      if (/^https?:\/\//i.test(normalized)) return normalized;
+
+      if (normalized.startsWith('team-members/')) {
+        const { data: publicData } = supabase.storage.from('photos').getPublicUrl(normalized);
+        return publicData.publicUrl;
+      }
+
+      return normalized;
     }
 
     function normalizeTeamMembers(rawMembers) {

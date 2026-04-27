@@ -1042,6 +1042,12 @@
   background: rgba(183,255,60,0.1);
 }
 
+.team-editor-badge.is-success {
+  color: #9dff71;
+  border-color: rgba(157,255,113,0.35);
+  background: rgba(43,112,31,0.2);
+}
+
 .team-editor-layout {
   display: grid;
   gap: 18px;
