@@ -293,6 +293,7 @@ begin
 end;
 $$;
 
+drop function if exists public.admin_list_users();
 create or replace function public.admin_list_users()
 returns table (
   id uuid,
@@ -1190,6 +1191,7 @@ begin
 end;
 $$;
 
+drop function if exists public.admin_list_users();
 create or replace function public.admin_list_users()
 returns table (
   id uuid,
