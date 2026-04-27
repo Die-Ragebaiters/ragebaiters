@@ -381,6 +381,38 @@ header.container {
   box-shadow: 0 0 0 1px rgba(10, 12, 18, 0.35) inset, 0 16px 44px rgba(183, 255, 60, 0.12);
 }
 
+.nav-login-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--r-pill);
+  border: 1px solid rgba(183, 255, 60, 0.42);
+  background: rgba(183, 255, 60, 0.10);
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 850;
+}
+
+.nav-login-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(183, 255, 60, 0.85);
+  box-shadow: 0 0 26px rgba(183, 255, 60, 0.20);
+}
+
+.nav-login-copy {
+  letter-spacing: 0;
+  font-size: 0.92rem;
+}
+
+.nav-login-link:hover {
+  transform: translateY(-1px);
+  background: rgba(183, 255, 60, 0.14);
+  border-color: rgba(183, 255, 60, 0.55);
+  color: rgba(255, 255, 255, 0.96);
+}
+
 .social-icon {
   width: 40px;
   height: 40px;
@@ -492,6 +524,12 @@ body.nav-lock {
     padding: 12px 14px;
     border: 1px solid rgba(255, 255, 255, 0.10);
     background: rgba(255, 255, 255, 0.05);
+  }
+
+  .nav-login-link {
+    justify-content: center;
+    background: rgba(183, 255, 60, 0.12);
+    border-color: rgba(183, 255, 60, 0.42);
   }
 
   .nav-links a.active {

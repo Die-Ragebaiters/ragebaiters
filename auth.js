@@ -265,6 +265,22 @@ export async function renderAuthNav(active = '') {
 
   const user = await getSessionUser();
 
+  if (nav && !user) {
+    const firstSocial = nav.querySelector('.social-icon');
+    const login = document.createElement('a');
+    login.href = buildScopedUrl('login.html');
+    login.className = 'nav-login-link';
+    login.dataset.authLink = '1';
+    login.title = 'Mitglieder-Login';
+    login.setAttribute('aria-label', 'Mitglieder-Login');
+    login.innerHTML = `
+      <span class="nav-login-dot" aria-hidden="true"></span>
+      <span class="nav-login-copy">Login</span>`;
+
+    if (firstSocial) nav.insertBefore(login, firstSocial);
+    else nav.appendChild(login);
+  }
+
   if (nav && user) {
     const firstSocial = nav.querySelector('.social-icon');
     const wrap = document.createElement('div');
@@ -294,27 +310,6 @@ export async function renderAuthNav(active = '') {
       location.href = currentSessionScope ? buildScopedUrl('login.html') : 'index.html';
     });
     nav.insertBefore(logout, firstSocial);
-  }
-
-  if (footer && !user) {
-    const wrap = document.createElement('div');
-    wrap.dataset.authLink = '1';
-    wrap.className = 'footer-auth';
-    wrap.innerHTML = `
-      <a class="footer-login-link" href="${escapeAttr(buildScopedUrl('login.html'))}" title="Interner Login" aria-label="Interner Login">
-        <span class="footer-login-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-               stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2"/>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-          </svg>
-        </span>
-        <span class="footer-login-copy">
-          <strong>Mitglieder-Login</strong>
-          <span>Zum internen Bereich</span>
-        </span>
-      </a>`;
-    footer.appendChild(wrap);
   }
 }
 
