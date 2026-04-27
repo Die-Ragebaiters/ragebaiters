@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mediathek | die Ragebaiters</title>
   <link rel="icon" type="image/png" href="images/logo.png">
-  <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="app.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="./styles.css?v=2026-04-23-6">
+  <link rel="stylesheet" href="./app.css?v=2026-04-23-6">
 </head>
 <body>
 
@@ -71,8 +73,8 @@
     <div style="font-size: 0.8rem; opacity: 0.6;">Est. 2026 • Made by sneiper0</div>
   </footer>
 
-  <script src="nav.js?v=2026-04-23-1" defer></script>
-  <script src="config.js"></script>
+  <script src="./nav.js?v=2026-04-23-5" defer></script>
+  <script src="./config.js?v=2026-04-23-5"></script>
   <script type="module">
     import { supabase, initPage, getSessionUser, getProfile } from './auth.js?v=2026-04-23-1';
     await initPage('mediathek');
@@ -108,7 +110,7 @@
         fig.dataset.author = p.author || '';
         fig.innerHTML = `
           <img src="${imageUrl}" alt="${escapeHtml(p.title || 'Mediathek Bild')}" loading="lazy">
-          ${isAdmin ? '<button class="btn-delete" type="button" title="Löschen">x</button>' : ''}`;
+          ${isAdmin ? '<button class="btn-delete" type="button" title="Loeschen">x</button>' : ''}`;
         grid.appendChild(fig);
       }
       gallery.appendChild(grid);
@@ -120,7 +122,7 @@
             const photoId = Number(fig?.dataset.id);
             const photoPath = fig?.dataset.path || '';
             if (!photoId) return;
-            if (!confirm('Dieses Bild wirklich aus der Mediathek löschen?')) return;
+            if (!confirm('Dieses Bild wirklich aus der Mediathek loeschen?')) return;
 
             if (photoPath && !String(photoPath).startsWith('__local__/')) {
               const { error: storageError } = await supabase.storage.from('photos').remove([photoPath]);
@@ -133,7 +135,7 @@
               p_photo_id: photoId
             });
             if (deleteError) return alert(deleteError.message);
-            if (!deleted) return alert('Bild konnte nicht gelöscht werden.');
+            if (!deleted) return alert('Bild konnte nicht geloescht werden.');
             fig.remove();
             if (!grid.querySelector('.photo-item')) {
               gallery.innerHTML = '<div class="card" style="text-align:center; color: var(--muted);">Es wurden noch keine Fotos hochgeladen.</div>';

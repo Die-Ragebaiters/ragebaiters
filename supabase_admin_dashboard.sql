@@ -1,5 +1,5 @@
 -- Ragebaiters Admin Dashboard / Supabase Setup
--- Diese Datei im Supabase SQL Editor ausführen.
+-- Diese Datei im Supabase SQL Editor ausfuehren.
 -- Enthält den Observer-Review-Workflow inkl. Admin-Troll-Aktion.
 
 drop function if exists public.admin_list_invites();
@@ -114,7 +114,7 @@ declare
   v_role text;
 begin
   if auth.uid() is null then
-    raise exception 'Du musst eingeloggt sein, um einen Einladungscode einzulösen.';
+    raise exception 'Du musst eingeloggt sein, um einen Einladungscode einzuloesen.';
   end if;
 
   update public.invites
@@ -183,11 +183,11 @@ set search_path = public
 as $$
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen das Startseiten-Banner ändern.';
+    raise exception 'Nur Admins duerfen das Startseiten-Banner aendern.';
   end if;
 
   if p_variant not in ('sponsor', 'team') then
-    raise exception 'Ungültige Banner-Variante: %', p_variant;
+    raise exception 'Ungueltige Banner-Variante: %', p_variant;
   end if;
 
   insert into public.site_settings (key, value_text, updated_at, updated_by)
@@ -252,7 +252,7 @@ declare
   v_role text;
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen Einladungscodes erstellen.';
+    raise exception 'Nur Admins duerfen Einladungscodes erstellen.';
   end if;
 
   v_code := upper(trim(coalesce(p_code, '')));
@@ -262,7 +262,7 @@ begin
   end if;
 
   if v_role not in ('observer', 'member', 'admin') then
-    raise exception 'Ungültige Rollen-Zuordnung für Einladungscode.';
+    raise exception 'Ungueltige Rollen-Zuordnung fuer Einladungscode.';
   end if;
 
   insert into public.invites (code, "for", role, created_at, created_by)
@@ -283,7 +283,7 @@ set search_path = public
 as $$
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen Einladungscodes löschen.';
+    raise exception 'Nur Admins duerfen Einladungscodes loeschen.';
   end if;
 
   delete from public.invites
@@ -411,7 +411,7 @@ declare
   v_role text;
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen Benutzer bearbeiten.';
+    raise exception 'Nur Admins duerfen Benutzer bearbeiten.';
   end if;
 
   v_username := trim(coalesce(p_username, ''));
@@ -426,11 +426,11 @@ begin
   end if;
 
   if v_username !~ '^[A-Za-z0-9_.-]+$' then
-    raise exception 'Der Benutzername enthält ungültige Zeichen.';
+    raise exception 'Der Benutzername enthaelt ungueltige Zeichen.';
   end if;
 
   if v_role not in ('observer', 'member', 'admin') then
-    raise exception 'Ungültige Rolle.';
+    raise exception 'Ungueltige Rolle.';
   end if;
 
   if exists (
@@ -460,7 +460,7 @@ set search_path = public
 as $$
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen Uploads freigeben.';
+    raise exception 'Nur Admins duerfen Uploads freigeben.';
   end if;
 
   update public.photos
@@ -479,7 +479,7 @@ set search_path = public
 as $$
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen Uploads als Troll-Post markieren.';
+    raise exception 'Nur Admins duerfen Uploads als Troll-Post markieren.';
   end if;
 
   update public.photos
@@ -498,7 +498,7 @@ end;
 $$;
 
 -- ============================================================
--- Homepage Instagram Card (Design vorbereitet für Live-Sync)
+-- Homepage Instagram Card (Design vorbereitet fuer Live-Sync)
 -- ============================================================
 
 drop function if exists public.get_homepage_instagram_post();
@@ -552,7 +552,7 @@ set search_path = public
 as $$
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen den Instagram-Beitrag auf der Startseite ändern.';
+    raise exception 'Nur Admins duerfen den Instagram-Beitrag auf der Startseite aendern.';
   end if;
 
   insert into public.site_settings (key, value_text, updated_at, updated_by)
@@ -576,7 +576,7 @@ grant execute on function public.get_homepage_instagram_post() to anon, authenti
 grant execute on function public.admin_set_homepage_instagram_post(text, text, text, text, timestamptz, text) to authenticated;
 
 -- ============================================================
--- Team-Verwaltung für Dashboard + Team-Seite
+-- Team-Verwaltung fuer Dashboard + Team-Seite
 -- ============================================================
 
 drop function if exists public.get_team_members();
@@ -586,13 +586,13 @@ insert into public.site_settings (key, value_text)
 values (
   'team_members_json',
   $$[
-    {"id":"ben","name":"Yotzek (Ben)","role":"Teamführer","description":"Ben koordiniert die Truppe und bewahrt selbst im Gefecht einen kühlen Kopf.","image_url":"images/benf.png","is_leader":true,"sort_order":10},
-    {"id":"jason","name":"sneiper0 (Jason)","role":"Sniper","description":"Präzisionsschütze der Ragebaiters.","image_url":"images/logo.png","is_leader":false,"sort_order":20},
-    {"id":"michael","name":"MundMbrothers (Michael)","role":"Medic","description":"Sorgt für die Einsatzfähigkeit des Teams.","image_url":"images/michi2.png","is_leader":false,"sort_order":30},
-    {"id":"nils","name":"Disccave (Nils)","role":"Breacher / OG","description":"Einer der OGs. Experte für Improvisation.","image_url":"images/nils.png","is_leader":false,"sort_order":40},
+    {"id":"ben","name":"Yotzek (Ben)","role":"Teamfuehrer","description":"Ben koordiniert die Truppe und bewahrt selbst im Gefecht einen kuehlen Kopf.","image_url":"images/benf.png","is_leader":true,"sort_order":10},
+    {"id":"jason","name":"sneiper0 (Jason)","role":"Sniper","description":"Praezisionsschuetze der Ragebaiters.","image_url":"images/logo.png","is_leader":false,"sort_order":20},
+    {"id":"michael","name":"MundMbrothers (Michael)","role":"Medic","description":"Sorgt fuer die Einsatzfaehigkeit des Teams.","image_url":"images/michi2.png","is_leader":false,"sort_order":30},
+    {"id":"nils","name":"Disccave (Nils)","role":"Breacher / OG","description":"Einer der OGs. Experte fuer Improvisation.","image_url":"images/nils.png","is_leader":false,"sort_order":40},
     {"id":"nathan","name":"Nathan Goldstein (Nathan)","role":"Support","description":"Gibt Feuerschutz mit hohem Munitionsdurchsatz.","image_url":"images/nathan.png","is_leader":false,"sort_order":50},
-    {"id":"riccardo","name":"Gemeral Richard (Riccardo)","role":"Breacher","description":"Spezialist für CQB.","image_url":"images/riccardo.png","is_leader":false,"sort_order":60},
-    {"id":"wolfgang","name":"Wolfgang","role":"Techniker","description":"Hält die Markierer am Laufen.","image_url":"images/wolfgang.png","is_leader":false,"sort_order":70}
+    {"id":"riccardo","name":"Gemeral Richard (Riccardo)","role":"Breacher","description":"Spezialist fuer CQB.","image_url":"images/riccardo.png","is_leader":false,"sort_order":60},
+    {"id":"wolfgang","name":"Wolfgang","role":"Techniker","description":"Haelt die Markierer am Laufen.","image_url":"images/wolfgang.png","is_leader":false,"sort_order":70}
   ]$$
 )
 on conflict (key) do nothing;
@@ -618,11 +618,11 @@ set search_path = public
 as $$
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen die Team-Seite bearbeiten.';
+    raise exception 'Nur Admins duerfen die Team-Seite bearbeiten.';
   end if;
 
   if jsonb_typeof(coalesce(p_members, 'null'::jsonb)) <> 'array' then
-    raise exception 'Die Team-Daten müssen als JSON-Array gespeichert werden.';
+    raise exception 'Die Team-Daten muessen als JSON-Array gespeichert werden.';
   end if;
 
   insert into public.site_settings (key, value_text, updated_at, updated_by)
@@ -640,9 +640,9 @@ grant execute on function public.get_team_members() to anon, authenticated;
 grant execute on function public.admin_set_team_members(jsonb) to authenticated;
 
 -- ============================================================
--- Testaccount für Admin-Vorschau
+-- Testaccount fuer Admin-Vorschau
 -- Erlaubt Admins, einen getrennten Observer-Testaccount in
--- einem neuen Tab zu öffnen, ohne ihren eigenen Login zu verlieren.
+-- einem neuen Tab zu oeffnen, ohne ihren eigenen Login zu verlieren.
 -- ============================================================
 
 create table if not exists public.site_settings (
@@ -682,7 +682,7 @@ declare
   v_role text;
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen den Testaccount öffnen.';
+    raise exception 'Nur Admins duerfen den Testaccount oeffnen.';
   end if;
 
   select value_text into v_email
@@ -743,7 +743,7 @@ declare
   v_user_id uuid;
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen den Testaccount vorbereiten.';
+    raise exception 'Nur Admins duerfen den Testaccount vorbereiten.';
   end if;
 
   v_email := lower(trim(coalesce(p_email, '')));
@@ -755,7 +755,7 @@ begin
   end if;
 
   if v_role not in ('observer', 'member', 'admin') then
-    raise exception 'Ungültige Testaccount-Rolle.';
+    raise exception 'Ungueltige Testaccount-Rolle.';
   end if;
 
   select id
@@ -814,7 +814,7 @@ declare
   v_storage_path text;
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen Uploads löschen.';
+    raise exception 'Nur Admins duerfen Uploads loeschen.';
   end if;
 
   select storage_path
@@ -826,7 +826,7 @@ begin
     return false;
   end if;
 
-  -- Storage-Dateien werden clientseitig über die Storage API entfernt.
+  -- Storage-Dateien werden clientseitig ueber die Storage API entfernt.
 
   delete from public.photos
   where id = p_photo_id;
@@ -845,14 +845,14 @@ declare
   v_deleted_count integer := 0;
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen Benutzer löschen.';
+    raise exception 'Nur Admins duerfen Benutzer loeschen.';
   end if;
 
   if p_user_id = auth.uid() then
-    raise exception 'Du kannst deinen eigenen Admin-Account hier nicht löschen.';
+    raise exception 'Du kannst deinen eigenen Admin-Account hier nicht loeschen.';
   end if;
 
-  -- Storage-Dateien werden clientseitig über die Storage API entfernt.
+  -- Storage-Dateien werden clientseitig ueber die Storage API entfernt.
 
   delete from public.photos
   where user_id = p_user_id;
@@ -877,7 +877,7 @@ begin
 
   get diagnostics v_deleted_count = row_count;
   if v_deleted_count = 0 then
-    raise exception 'Benutzer wurde im Auth-System nicht gefunden oder konnte nicht gelöscht werden.';
+    raise exception 'Benutzer wurde im Auth-System nicht gefunden oder konnte nicht geloescht werden.';
   end if;
 
   return true;
@@ -905,7 +905,7 @@ grant execute on function public.admin_delete_user(uuid) to authenticated;
 
 grant select on public.photos_public to anon, authenticated;
 -- Ragebaiters Admin Dashboard / Supabase Setup
--- Diese Datei im Supabase SQL Editor ausführen.
+-- Diese Datei im Supabase SQL Editor ausfuehren.
 -- Enthält den Observer-Review-Workflow inkl. Admin-Troll-Aktion.
 
 drop function if exists public.admin_list_invites();
@@ -1011,7 +1011,7 @@ declare
   v_role text;
 begin
   if auth.uid() is null then
-    raise exception 'Du musst eingeloggt sein, um einen Einladungscode einzulösen.';
+    raise exception 'Du musst eingeloggt sein, um einen Einladungscode einzuloesen.';
   end if;
 
   update public.invites
@@ -1080,11 +1080,11 @@ set search_path = public
 as $$
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen das Startseiten-Banner ändern.';
+    raise exception 'Nur Admins duerfen das Startseiten-Banner aendern.';
   end if;
 
   if p_variant not in ('sponsor', 'team') then
-    raise exception 'Ungültige Banner-Variante: %', p_variant;
+    raise exception 'Ungueltige Banner-Variante: %', p_variant;
   end if;
 
   insert into public.site_settings (key, value_text, updated_at, updated_by)
@@ -1149,7 +1149,7 @@ declare
   v_role text;
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen Einladungscodes erstellen.';
+    raise exception 'Nur Admins duerfen Einladungscodes erstellen.';
   end if;
 
   v_code := upper(trim(coalesce(p_code, '')));
@@ -1159,7 +1159,7 @@ begin
   end if;
 
   if v_role not in ('observer', 'member', 'admin') then
-    raise exception 'Ungültige Rollen-Zuordnung für Einladungscode.';
+    raise exception 'Ungueltige Rollen-Zuordnung fuer Einladungscode.';
   end if;
 
   insert into public.invites (code, "for", role, created_at, created_by)
@@ -1180,7 +1180,7 @@ set search_path = public
 as $$
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen Einladungscodes löschen.';
+    raise exception 'Nur Admins duerfen Einladungscodes loeschen.';
   end if;
 
   delete from public.invites
@@ -1308,7 +1308,7 @@ declare
   v_role text;
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen Benutzer bearbeiten.';
+    raise exception 'Nur Admins duerfen Benutzer bearbeiten.';
   end if;
 
   v_username := trim(coalesce(p_username, ''));
@@ -1323,11 +1323,11 @@ begin
   end if;
 
   if v_username !~ '^[A-Za-z0-9_.-]+$' then
-    raise exception 'Der Benutzername enthält ungültige Zeichen.';
+    raise exception 'Der Benutzername enthaelt ungueltige Zeichen.';
   end if;
 
   if v_role not in ('observer', 'member', 'admin') then
-    raise exception 'Ungültige Rolle.';
+    raise exception 'Ungueltige Rolle.';
   end if;
 
   if exists (
@@ -1357,7 +1357,7 @@ set search_path = public
 as $$
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen Uploads freigeben.';
+    raise exception 'Nur Admins duerfen Uploads freigeben.';
   end if;
 
   update public.photos
@@ -1376,7 +1376,7 @@ set search_path = public
 as $$
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen Uploads als Troll-Post markieren.';
+    raise exception 'Nur Admins duerfen Uploads als Troll-Post markieren.';
   end if;
 
   update public.photos
@@ -1404,7 +1404,7 @@ declare
   v_storage_path text;
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen Uploads löschen.';
+    raise exception 'Nur Admins duerfen Uploads loeschen.';
   end if;
 
   select storage_path
@@ -1416,7 +1416,7 @@ begin
     return false;
   end if;
 
-  -- Storage-Dateien werden clientseitig über die Storage API entfernt.
+  -- Storage-Dateien werden clientseitig ueber die Storage API entfernt.
 
   delete from public.photos
   where id = p_photo_id;
@@ -1435,14 +1435,14 @@ declare
   v_deleted_count integer := 0;
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen Benutzer löschen.';
+    raise exception 'Nur Admins duerfen Benutzer loeschen.';
   end if;
 
   if p_user_id = auth.uid() then
-    raise exception 'Du kannst deinen eigenen Admin-Account hier nicht löschen.';
+    raise exception 'Du kannst deinen eigenen Admin-Account hier nicht loeschen.';
   end if;
 
-  -- Storage-Dateien werden clientseitig über die Storage API entfernt.
+  -- Storage-Dateien werden clientseitig ueber die Storage API entfernt.
 
   delete from public.photos
   where user_id = p_user_id;
@@ -1467,7 +1467,7 @@ begin
 
   get diagnostics v_deleted_count = row_count;
   if v_deleted_count = 0 then
-    raise exception 'Benutzer wurde im Auth-System nicht gefunden oder konnte nicht gelöscht werden.';
+    raise exception 'Benutzer wurde im Auth-System nicht gefunden oder konnte nicht geloescht werden.';
   end if;
 
   return true;
@@ -1502,7 +1502,7 @@ set search_path = public
 as $$
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen Uploads löschen.';
+    raise exception 'Nur Admins duerfen Uploads loeschen.';
   end if;
 
   delete from public.photos
@@ -1523,7 +1523,7 @@ declare
   v_troll_path text;
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen Uploads als Troll-Post markieren.';
+    raise exception 'Nur Admins duerfen Uploads als Troll-Post markieren.';
   end if;
 
   v_troll_path := (
@@ -1561,7 +1561,7 @@ declare
   v_troll_path text;
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen Uploads als Troll-Post markieren.';
+    raise exception 'Nur Admins duerfen Uploads als Troll-Post markieren.';
   end if;
 
   v_troll_path := (
@@ -1681,7 +1681,7 @@ declare
   v_session record;
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen Testaccounts bereinigen.';
+    raise exception 'Nur Admins duerfen Testaccounts bereinigen.';
   end if;
 
   for v_session in
@@ -1726,7 +1726,7 @@ declare
   v_expires_at timestamptz;
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen den Testaccount öffnen.';
+    raise exception 'Nur Admins duerfen den Testaccount oeffnen.';
   end if;
 
   perform public.admin_cleanup_expired_test_accounts();
@@ -1788,7 +1788,7 @@ set search_path = public
 as $$
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen Testaccounts rotieren.';
+    raise exception 'Nur Admins duerfen Testaccounts rotieren.';
   end if;
 
   perform public.admin_cleanup_expired_test_accounts(p_previous_session_scope);
@@ -1816,7 +1816,7 @@ declare
   v_user_id uuid;
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen den Testaccount vorbereiten.';
+    raise exception 'Nur Admins duerfen den Testaccount vorbereiten.';
   end if;
 
   v_email := lower(trim(coalesce(p_email, '')));
@@ -1918,7 +1918,7 @@ declare
   v_role text;
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen Benutzer bearbeiten.';
+    raise exception 'Nur Admins duerfen Benutzer bearbeiten.';
   end if;
 
   v_username := trim(coalesce(p_username, ''));
@@ -1933,11 +1933,11 @@ begin
   end if;
 
   if v_username !~ '^[A-Za-z0-9_.-]+$' then
-    raise exception 'Der Benutzername enthält ungültige Zeichen.';
+    raise exception 'Der Benutzername enthaelt ungueltige Zeichen.';
   end if;
 
   if v_role not in ('observer', 'member', 'admin') then
-    raise exception 'Ungültige Rolle.';
+    raise exception 'Ungueltige Rolle.';
   end if;
 
   if exists (
@@ -1967,15 +1967,15 @@ set search_path = public
 as $$
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen Benutzer löschen.';
+    raise exception 'Nur Admins duerfen Benutzer loeschen.';
   end if;
 
   if p_user_id = auth.uid() then
-    raise exception 'Du kannst deinen eigenen Admin-Account hier nicht löschen.';
+    raise exception 'Du kannst deinen eigenen Admin-Account hier nicht loeschen.';
   end if;
 
   if not public.hard_delete_user_account(p_user_id) then
-    raise exception 'Benutzer wurde im Auth-System nicht gefunden oder konnte nicht gelöscht werden.';
+    raise exception 'Benutzer wurde im Auth-System nicht gefunden oder konnte nicht geloescht werden.';
   end if;
 
   return true;
@@ -1998,7 +1998,7 @@ declare
   v_troll_path text;
 begin
   if not public.is_admin() then
-    raise exception 'Nur Admins dürfen Uploads als Troll-Post markieren.';
+    raise exception 'Nur Admins duerfen Uploads als Troll-Post markieren.';
   end if;
 
   select picked.path
@@ -2027,107 +2027,3 @@ begin
   return found;
 end;
 $$;
-
--- ============================================================
--- Homepage Banner Custom Upload
--- ============================================================
-
-insert into public.site_settings (key, value_text)
-values ('homepage_banner_image_url', '')
-on conflict (key) do nothing;
-
-drop function if exists public.get_homepage_banner_settings();
-
-create or replace function public.get_homepage_banner()
-returns text
-language sql
-security definer
-set search_path = public
-stable
-as $$
-  select case
-    when coalesce((select value_text from public.site_settings where key = 'homepage_banner_variant'), 'team') in ('sponsor', 'team', 'custom')
-      then coalesce((select value_text from public.site_settings where key = 'homepage_banner_variant'), 'team')
-    else 'team'
-  end;
-$$;
-
-create or replace function public.get_homepage_banner_settings()
-returns table (
-  variant text,
-  image_url text
-)
-language sql
-security definer
-set search_path = public
-stable
-as $$
-  select
-    case
-      when coalesce((select value_text from public.site_settings where key = 'homepage_banner_variant'), 'team') in ('sponsor', 'team', 'custom')
-        then coalesce((select value_text from public.site_settings where key = 'homepage_banner_variant'), 'team')
-      else 'team'
-    end as variant,
-    coalesce((select value_text from public.site_settings where key = 'homepage_banner_image_url'), '') as image_url;
-$$;
-
-create or replace function public.admin_set_homepage_banner(
-  p_variant text,
-  p_image_url text default ''
-)
-returns boolean
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_variant text := lower(trim(coalesce(p_variant, 'team')));
-  v_image_url text := trim(coalesce(p_image_url, ''));
-begin
-  if not public.is_admin() then
-    raise exception 'Nur Admins duerfen das Startseiten-Banner aendern.';
-  end if;
-
-  if v_variant not in ('sponsor', 'team', 'custom') then
-    raise exception 'Ungueltige Banner-Variante: %', v_variant;
-  end if;
-
-  if v_variant = 'custom' and v_image_url = '' then
-    raise exception 'Fuer das eigene Banner muss zuerst ein Bild hochgeladen werden.';
-  end if;
-
-  insert into public.site_settings (key, value_text, updated_at, updated_by)
-  values
-    ('homepage_banner_variant', v_variant, now(), auth.uid()),
-    ('homepage_banner_image_url', v_image_url, now(), auth.uid())
-  on conflict (key) do update
-    set value_text = excluded.value_text,
-        updated_at = excluded.updated_at,
-        updated_by = excluded.updated_by;
-
-  return true;
-end;
-$$;
-
-create or replace function public.admin_set_homepage_banner(p_variant text)
-returns boolean
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_image_url text;
-begin
-  select coalesce(value_text, '')
-  into v_image_url
-  from public.site_settings
-  where key = 'homepage_banner_image_url';
-
-  return public.admin_set_homepage_banner(p_variant, v_image_url);
-end;
-$$;
-
-grant execute on function public.get_homepage_banner() to anon, authenticated;
-grant execute on function public.get_homepage_banner_settings() to anon, authenticated;
-grant execute on function public.admin_set_homepage_banner(text) to authenticated;
-grant execute on function public.admin_set_homepage_banner(text, text) to authenticated;

@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>die Ragebaiters | Airsoft Team</title>
   <link rel="icon" type="image/png" href="images/logo.png">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="./styles.css?v=2026-04-23-6">
 </head>
 <body>
 
@@ -117,9 +119,9 @@
         <div>
           <span class="eyebrow">Instagram</span>
           <h2 style="margin: 10px 0 4px;">Neuester Instagram-Beitrag</h2>
-          <p style="color: var(--muted); margin: 0;">Der Bereich ist jetzt im Design der Seite vorbereitet und kann später direkt an eine Live-Instagram-Datenquelle angebunden werden.</p>
+          <p style="color: var(--muted); margin: 0;">Der Bereich ist jetzt im Design der Seite vorbereitet und kann spaeter direkt an eine Live-Instagram-Datenquelle angebunden werden.</p>
         </div>
-        <a href="https://www.instagram.com/die_ragebaiters/" target="_blank" rel="noopener">Instagram öffnen</a>
+        <a href="https://www.instagram.com/die_ragebaiters/" target="_blank" rel="noopener">Instagram oeffnen</a>
       </div>
       <div id="instagram-latest">
         <article class="card instagram-post-card">
@@ -134,8 +136,8 @@
     <div style="font-size: 0.8rem; opacity: 0.6;">Est. 2026 • Made by sneiper0</div>
   </footer>
 
-<script src="nav.js?v=2026-04-23-1" defer></script>
-<script src="config.js"></script>
+<script src="./nav.js?v=2026-04-23-5" defer></script>
+<script src="./config.js?v=2026-04-23-5"></script>
 <script type="module">
     import { supabase, initPage, getSessionUser, getProfile } from './auth.js?v=2026-04-23-1';
   await initPage('home');
@@ -145,15 +147,8 @@
   const instagramLatest = document.getElementById('instagram-latest');
   const instagramProfileUrl = 'https://www.instagram.com/die_ragebaiters/';
 
-  const { data: bannerSettings } = await supabase.rpc('get_homepage_banner_settings');
-  const activeBanner = Array.isArray(bannerSettings) ? bannerSettings[0] : bannerSettings;
-  const bannerVariant = String(activeBanner?.variant || 'team').trim().toLowerCase();
-  const customBannerUrl = String(activeBanner?.image_url || '').trim();
-
-  if (bannerVariant === 'custom' && customBannerUrl) {
-    topBannerImg.src = customBannerUrl;
-    topBannerImg.alt = 'die Ragebaiters Banner';
-  } else if (bannerVariant === 'sponsor') {
+  const { data: bannerVariant } = await supabase.rpc('get_homepage_banner');
+  if (bannerVariant === 'sponsor') {
     topBannerImg.src = 'images/banner.png';
     topBannerImg.alt = 'die Ragebaiters Sponsor Banner';
   } else {
@@ -185,7 +180,7 @@
           <div class="latest-media-copy">
             <span class="latest-media-label">Zuletzt hochgeladen</span>
             <h3>${escapeHtml(latestPhoto.title || 'Neuer Mediathek-Post')}</h3>
-            ${latestPhoto.caption ? `<p>${escapeHtml(latestPhoto.caption)}</p>` : '<p>In der Mediathek ist ein neuer Beitrag verfügbar.</p>'}
+            ${latestPhoto.caption ? `<p>${escapeHtml(latestPhoto.caption)}</p>` : '<p>In der Mediathek ist ein neuer Beitrag verfuegbar.</p>'}
             <div class="latest-media-meta">
               <span>von ${escapeHtml(latestPhoto.author || 'anonym')}</span>
               <span>${formatDate(latestPhoto.uploaded_at)}</span>
@@ -232,7 +227,7 @@
       console.error('[Ragebaiters] Instagram-Post konnte nicht geladen werden:', error);
       instagramLatest.innerHTML = buildInstagramFallbackCard({
         title: 'Instagram-Verbindung wird vorbereitet',
-        copy: 'Das Layout für den neuesten Instagram-Beitrag steht bereits. Die Live-Anbindung kann jetzt später direkt an Meta oder eine Supabase-Synchronisierung angeschlossen werden.'
+        copy: 'Das Layout fuer den neuesten Instagram-Beitrag steht bereits. Die Live-Anbindung kann jetzt spaeter direkt an Meta oder eine Supabase-Synchronisierung angeschlossen werden.'
       });
       return;
     }
@@ -255,7 +250,7 @@
 
     const primaryAction = post.post_url
       ? `<a href="${escapeHtmlAttr(post.post_url)}" target="_blank" rel="noopener">Beitrag ansehen</a>`
-      : `<a href="${instagramProfileUrl}" target="_blank" rel="noopener">Profil öffnen</a>`;
+      : `<a href="${instagramProfileUrl}" target="_blank" rel="noopener">Profil oeffnen</a>`;
 
     instagramLatest.innerHTML = `
       <article class="card instagram-post-card">
@@ -274,7 +269,7 @@
             </div>
             <div class="instagram-post-actions">
               ${primaryAction}
-              <a class="instagram-post-secondary" href="${instagramProfileUrl}" target="_blank" rel="noopener">Profil öffnen</a>
+              <a class="instagram-post-secondary" href="${instagramProfileUrl}" target="_blank" rel="noopener">Profil oeffnen</a>
             </div>
           </div>
         </div>
@@ -301,7 +296,7 @@
               <span>Wartet auf Live-Daten</span>
             </div>
             <div class="instagram-post-actions">
-              <a href="${instagramProfileUrl}" target="_blank" rel="noopener">Instagram öffnen</a>
+              <a href="${instagramProfileUrl}" target="_blank" rel="noopener">Instagram oeffnen</a>
             </div>
           </div>
         </div>

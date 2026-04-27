@@ -23,8 +23,7 @@ const TEST_HANDOFF_PREFIX = 'ragebaiters:test-handoff:';
 const TEST_ACCOUNT_LIFETIME_MS = 5 * 60 * 1000;
 const BANNER_OPTIONS = {
   sponsor: { src: 'images/banner.png', label: 'Sponsor' },
-  team: { src: 'images/banner2.png', label: 'Team' },
-  custom: { src: 'images/banner2.png', label: 'Eigenes Banner' }
+  team: { src: 'images/banner2.png', label: 'Team' }
 };
 
 const loadingSection = document.getElementById('loading');
@@ -34,6 +33,7 @@ const roleBadge = document.getElementById('roleBadge');
 const memberNote = document.getElementById('memberNote');
 const tabButtons = [...document.querySelectorAll('.dashboard-tab')];
 const viewSections = [...document.querySelectorAll('.dashboard-view')];
+const quickButtons = [...document.querySelectorAll('.dash-quick-btn[href^="#"]')];
 const adminOnlyNodes = [...document.querySelectorAll('.role-admin-only, .role-admin-view')];
 const memberUpNodes = [...document.querySelectorAll('.role-member-up, .role-member-up-view')];
 const welcomeIntro = document.getElementById('welcomeIntro');
@@ -63,9 +63,6 @@ const inviteUsedCount = document.getElementById('inviteUsedCount');
 const inviteTotalCount = document.getElementById('inviteTotalCount');
 
 const bannerRadios = [...document.querySelectorAll('input[name="homepageBanner"]')];
-const bannerAccessHint = document.getElementById('bannerAccessHint');
-const bannerImageInput = document.getElementById('bannerImageInput');
-const bannerCustomOptionPreview = document.getElementById('bannerCustomOptionPreview');
 const bannerPreview = document.getElementById('bannerPreview');
 const saveBannerBtn = document.getElementById('saveBannerBtn');
 const bannerMessage = document.getElementById('bannerMessage');
@@ -97,7 +94,6 @@ const state = {
   isAdmin: false,
   canUpload: false,
   canViewUsers: false,
-  bannerImageUrl: '',
   teamMembers: [],
   userDirectory: []
 };
@@ -138,8 +134,6 @@ if (!state.isAdmin) {
   });
 }
 
-syncHomepageAccessState();
-
 if (!state.canUpload && !state.canViewUsers) {
   memberUpNodes.forEach(node => {
     node.hidden = true;
@@ -153,6 +147,7 @@ if (state.canUpload) setupUploads();
 if (state.canViewUsers) refreshUsersBtn.addEventListener('click', () => loadUsers());
 setupAdminActions();
 setupTestAccountLifecycle();
+setupTeamMembersEditorActions();
 
 loadingSection.hidden = true;
 mainSection.hidden = false;
@@ -160,11 +155,14 @@ mainSection.hidden = false;
 if (state.canUpload) await loadMyPhotos();
 if (state.canViewUsers) await loadUsers();
 await loadTeamMembers();
-await Promise.all([
-  loadBannerSetting(),
-  loadInstagramSettings(),
-  ...(state.isAdmin ? [loadPendingReviews(), loadInvites()] : [])
-]);
+if (state.isAdmin) {
+  await Promise.all([
+    loadPendingReviews(),
+    loadInvites(),
+    loadBannerSetting(),
+    loadInstagramSettings()
+  ]);
+}
 
 function setupNavigation() {
   tabButtons.forEach(btn => {
@@ -182,11 +180,15 @@ function setupNavigation() {
   });
 }
 
+function setupTeamMembersEditorActions() {
+  addTeamMemberBtn?.addEventListener('click', () => addTeamMember());
+}
+
 function normalizeView(view) {
-  const allowed = ['welcome', 'team', 'banner'];
+  const allowed = ['welcome', 'team'];
   if (state.canUpload) allowed.push('uploads');
   if (state.canViewUsers) allowed.push('users');
-  if (state.isAdmin) allowed.push('invites');
+  if (state.isAdmin) allowed.push('invites', 'banner');
   return allowed.includes(view) ? view : 'welcome';
 }
 
@@ -204,6 +206,15 @@ function setActiveView(view) {
   if (location.hash !== `#${safeView}`) {
     history.replaceState(null, '', `#${safeView}`);
   }
+  syncQuickButtons(safeView);
+}
+
+function syncQuickButtons(activeView) {
+  if (!quickButtons.length) return;
+  quickButtons.forEach(link => {
+    const hash = String(link.getAttribute('href') || '').replace('#', '');
+    link.classList.toggle('is-active', hash === activeView);
+  });
 }
 
 function setupUploads() {
@@ -234,19 +245,6 @@ function setupUploads() {
 }
 
 function setupAdminActions() {
-  bannerRadios.forEach(radio => {
-    radio.addEventListener('change', () => updateBannerPreview(radio.value));
-  });
-
-  bannerImageInput?.addEventListener('change', async event => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-    await uploadBannerImage(file);
-  });
-
-  saveBannerBtn.addEventListener('click', () => saveBannerSetting());
-
   if (!state.isAdmin) return;
 
   if (openTestAccountBtn) {
@@ -270,7 +268,11 @@ function setupAdminActions() {
 
   refreshInvitesBtn.addEventListener('click', () => loadInvites());
 
-  saveTeamMembersBtn?.addEventListener('click', () => saveTeamMembers());
+  bannerRadios.forEach(radio => {
+    radio.addEventListener('change', () => updateBannerPreview(radio.value));
+  });
+
+  saveBannerBtn.addEventListener('click', () => saveBannerSetting());
   saveInstagramBtn.addEventListener('click', () => saveInstagramSettings());
 
   [
@@ -283,40 +285,6 @@ function setupAdminActions() {
   ].forEach(field => {
     field?.addEventListener('input', () => updateInstagramPreview());
   });
-}
-
-function syncHomepageAccessState() {
-  const isReadOnly = !state.isAdmin;
-  const bannerUploadTrigger = document.querySelector('[for="bannerImageInput"]');
-  const homepageControls = [
-    ...bannerRadios,
-    bannerImageInput,
-    saveBannerBtn,
-    instagramPostUrlInput,
-    instagramImageUrlInput,
-    instagramTitleInput,
-    instagramUsernameInput,
-    instagramPostedAtInput,
-    instagramCaptionInput,
-    saveInstagramBtn
-  ];
-
-  if (bannerAccessHint) {
-    bannerAccessHint.hidden = !isReadOnly;
-  }
-
-  homepageControls.forEach(control => {
-    if (control) control.disabled = isReadOnly;
-  });
-
-  bannerRadios.forEach(radio => {
-    radio.closest('.banner-choice')?.classList.toggle('is-disabled', isReadOnly);
-  });
-
-  if (bannerUploadTrigger) {
-    bannerUploadTrigger.classList.toggle('is-disabled', isReadOnly);
-    bannerUploadTrigger.setAttribute('aria-disabled', String(isReadOnly));
-  }
 }
 
 async function openTestAccountSession() {
@@ -357,7 +325,7 @@ async function openTestAccountSession() {
 
     setMessage(
       testAccountMessage,
-      'Testaccount im neuen Tab geöffnet. Er wird nach 5 Minuten automatisch ersetzt, dein Admin-Login bleibt hier aktiv.',
+      'Testaccount im neuen Tab geoeffnet. Er wird nach 5 Minuten automatisch ersetzt, dein Admin-Login bleibt hier aktiv.',
       'success'
     );
   } catch (error) {
@@ -365,7 +333,7 @@ async function openTestAccountSession() {
     const message = mapTestAccountError(error);
     setMessage(
       testAccountMessage,
-      `Testaccount konnte nicht geöffnet werden: ${message}`,
+      `Testaccount konnte nicht geoeffnet werden: ${message}`,
       'error'
     );
   }
@@ -429,9 +397,9 @@ async function rotateTestAccountSession() {
 
 function setupWelcome() {
   const introByRole = {
-    observer: 'Du bist als Beobachter eingeloggt. Du kannst Bilder hochladen, diese müssen aber erst von einem Admin freigegeben werden.',
+    observer: 'Du bist als Beobachter eingeloggt. Du kannst Bilder hochladen, diese muessen aber erst von einem Admin freigegeben werden.',
     member: 'Du bist als Mitglied eingeloggt. Du kannst Bilder hochladen und die Mitgliederliste ansehen.',
-    admin: 'Du bist als Admin eingeloggt. Alle Bereiche des Dashboards stehen dir vollständig zur Verfügung.'
+    admin: 'Du bist als Admin eingeloggt. Alle Bereiche des Dashboards stehen dir vollstaendig zur Verfuegung.'
   };
 
   welcomeIntro.textContent = introByRole[state.role] || introByRole.observer;
@@ -442,22 +410,22 @@ function setupWelcome() {
       'Uploads',
       state.canUpload ? 'Freigeschaltet' : 'Gesperrt',
       state.role === 'observer'
-        ? 'Bilder hochladen. Ein Admin muss sie freigeben, bevor sie öffentlich erscheinen.'
+        ? 'Bilder hochladen. Ein Admin muss sie freigeben, bevor sie oeffentlich erscheinen.'
         : state.canUpload
           ? 'Bilder hochladen und eigene Uploads verwalten.'
-          : 'Nur für Mitglieder, Beobachter und Admins freigeschaltet.'
+          : 'Nur fuer Mitglieder, Beobachter und Admins freigeschaltet.'
     ),
     capabilityCard(
       'Mitglieder',
       state.canViewUsers ? 'Freigeschaltet' : 'Gesperrt',
       state.canViewUsers
         ? (state.isAdmin ? 'Alle Benutzer sehen und verwalten.' : 'Mitgliederliste in reiner Lesesicht.')
-        : 'Nur für Mitglieder und Admins freigeschaltet.'
+        : 'Nur fuer Mitglieder und Admins freigeschaltet.'
     ),
     capabilityCard(
       'Admin-Funktionen',
       state.isAdmin ? 'Freigeschaltet' : 'Gesperrt',
-      state.isAdmin ? 'Einladungscodes, Banner und Benutzerverwaltung komplett verfügbar.' : 'Nur für Admins sichtbar.'
+      state.isAdmin ? 'Einladungscodes, Banner und Benutzerverwaltung komplett verfuegbar.' : 'Nur fuer Admins sichtbar.'
     )
   ];
 
@@ -467,12 +435,12 @@ function setupWelcome() {
 function setupUserSectionCopy() {
   if (state.isAdmin) {
     usersTitle.textContent = 'Benutzerverwaltung';
-    usersIntro.textContent = 'Alle Benutzer ansehen, Rollen anpassen, Benutzernamen ändern und Accounts löschen.';
+    usersIntro.textContent = 'Alle Benutzer ansehen, Rollen anpassen, Benutzernamen aendern und Accounts loeschen.';
     return;
   }
 
   usersTitle.textContent = 'Mitglieder';
-  usersIntro.textContent = 'Hier kannst du alle Benutzer der Website ansehen. Bearbeiten ist für Mitglieder nicht möglich.';
+  usersIntro.textContent = 'Hier kannst du alle Benutzer der Website ansehen. Bearbeiten ist fuer Mitglieder nicht moeglich.';
 }
 
 function handleUploadFiles(files) {
@@ -567,7 +535,7 @@ async function loadMyPhotos() {
     fig.className = 'photo-item';
 
     const actions = state.isAdmin
-      ? `<button class="btn-delete" type="button" data-id="${photo.id}" data-path="${encodeURIComponent(photo.storage_path)}" title="Löschen">x</button>`
+      ? `<button class="btn-delete" type="button" data-id="${photo.id}" data-path="${encodeURIComponent(photo.storage_path)}" title="Loeschen">x</button>`
       : '';
 
     fig.innerHTML = `
@@ -588,7 +556,7 @@ async function loadMyPhotos() {
 
   grid.querySelectorAll('.btn-delete').forEach(btn => {
     btn.addEventListener('click', async () => {
-      if (!confirm('Dieses Foto wirklich löschen?')) return;
+      if (!confirm('Dieses Foto wirklich loeschen?')) return;
 
       const id = Number(btn.dataset.id);
       const path = decodeURIComponent(btn.dataset.path);
@@ -605,7 +573,7 @@ async function loadMyPhotos() {
       });
 
       if (dbError) return alert(dbError.message);
-      if (!deleted) return alert('Foto konnte nicht gelöscht werden.');
+      if (!deleted) return alert('Foto konnte nicht geloescht werden.');
 
       loadMyPhotos();
       if (state.isAdmin) loadPendingReviews();
@@ -616,7 +584,7 @@ async function loadMyPhotos() {
 async function loadPendingReviews() {
   if (!state.isAdmin || !pendingReviews) return;
 
-  pendingReviews.innerHTML = '<div class="card" style="text-align:center; color: var(--muted);">Prüfe Uploads...</div>';
+  pendingReviews.innerHTML = '<div class="card" style="text-align:center; color: var(--muted);">Pruefe Uploads...</div>';
 
   const { data, error } = await supabase
     .from('photos')
@@ -669,7 +637,7 @@ async function loadPendingReviews() {
         <div class="table-actions">
           <button class="btn-tertiary" type="button" data-action="approve" data-id="${photo.id}">Freigeben</button>
           <button class="btn-danger" type="button" data-action="troll" data-id="${photo.id}">Troll</button>
-          <button class="btn-danger" type="button" data-action="delete-review" data-id="${photo.id}" data-path="${encodeURIComponent(photo.storage_path)}">Löschen</button>
+          <button class="btn-danger" type="button" data-action="delete-review" data-id="${photo.id}" data-path="${encodeURIComponent(photo.storage_path)}">Loeschen</button>
         </div>
       </figcaption>`;
     grid.appendChild(fig);
@@ -703,7 +671,7 @@ async function loadPendingReviews() {
     btn.addEventListener('click', async () => {
       const photoId = Number(btn.dataset.id);
       const photoPath = decodeURIComponent(btn.dataset.path || '');
-      if (!confirm('Diesen Upload wirklich löschen?')) return;
+      if (!confirm('Diesen Upload wirklich loeschen?')) return;
 
       if (photoPath && !isLocalPhotoPath(photoPath)) {
         const { error: storageError } = await supabase.storage.from('photos').remove([photoPath]);
@@ -717,7 +685,7 @@ async function loadPendingReviews() {
       });
 
       if (deleteError) return alert(deleteError.message);
-      if (!deleted) return alert('Upload konnte nicht gelöscht werden.');
+      if (!deleted) return alert('Upload konnte nicht geloescht werden.');
 
       await Promise.all([loadPendingReviews(), loadMyPhotos()]);
     });
@@ -791,7 +759,7 @@ async function loadInvites() {
       <td>
         <div class="table-actions">
           <button type="button" class="btn-tertiary" data-action="copy" data-code="${escapeHtmlAttr(invite.code)}">Kopieren</button>
-          <button type="button" class="btn-danger" data-action="delete-invite" data-code="${escapeHtmlAttr(invite.code)}">Löschen</button>
+          <button type="button" class="btn-danger" data-action="delete-invite" data-code="${escapeHtmlAttr(invite.code)}">Loeschen</button>
         </div>
       </td>
     </tr>`).join('');
@@ -811,59 +779,39 @@ async function loadInvites() {
   inviteRows.querySelectorAll('[data-action="delete-invite"]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const code = btn.dataset.code;
-      if (!confirm(`Einladungscode ${code} wirklich löschen?`)) return;
+      if (!confirm(`Einladungscode ${code} wirklich loeschen?`)) return;
 
       const { error: deleteError } = await supabase.rpc('admin_delete_invite', { p_code: code });
 
       if (deleteError) {
-        setMessage(inviteMessage, `Code konnte nicht gelöscht werden: ${deleteError.message}`, 'error');
+        setMessage(inviteMessage, `Code konnte nicht geloescht werden: ${deleteError.message}`, 'error');
         return;
       }
 
-      setMessage(inviteMessage, `Code gelöscht: ${code}`, 'success');
+      setMessage(inviteMessage, `Code geloescht: ${code}`, 'success');
       await loadInvites();
     });
   });
 }
 
 async function loadBannerSetting() {
-  const { data, error } = await supabase.rpc('get_homepage_banner_settings');
+  const { data, error } = await supabase.rpc('get_homepage_banner');
 
   if (error) {
     setMessage(bannerMessage, `Banner-Einstellung konnte nicht geladen werden: ${error.message}`, 'error');
-    state.bannerImageUrl = '';
-    updateCustomBannerOptionPreview();
     updateBannerPreview('team');
     return;
   }
 
-  const settings = Array.isArray(data) ? data[0] : data;
-  const variant = settings?.variant in BANNER_OPTIONS ? settings.variant : 'team';
-  state.bannerImageUrl = String(settings?.image_url || '').trim();
-  updateCustomBannerOptionPreview();
+  const variant = data in BANNER_OPTIONS ? data : 'team';
   const radio = bannerRadios.find(entry => entry.value === variant);
   if (radio) radio.checked = true;
   updateBannerPreview(variant);
 }
 
 async function saveBannerSetting() {
-  if (!state.isAdmin) {
-    setMessage(bannerMessage, 'Nur Admins können Banner speichern.', 'error');
-    return;
-  }
-
   const selected = bannerRadios.find(radio => radio.checked)?.value || 'team';
-  const bannerImageUrl = String(state.bannerImageUrl || '').trim();
-
-  if (selected === 'custom' && !bannerImageUrl) {
-    setMessage(bannerMessage, 'Bitte zuerst ein eigenes Banner-Bild hochladen.', 'error');
-    return;
-  }
-
-  const { error } = await supabase.rpc('admin_set_homepage_banner', {
-    p_variant: selected,
-    p_image_url: bannerImageUrl
-  });
+  const { error } = await supabase.rpc('admin_set_homepage_banner', { p_variant: selected });
 
   if (error) {
     setMessage(bannerMessage, `Banner konnte nicht gespeichert werden: ${error.message}`, 'error');
@@ -874,61 +822,10 @@ async function saveBannerSetting() {
   setMessage(bannerMessage, `Startseiten-Banner gespeichert: ${BANNER_OPTIONS[selected].label}`, 'success');
 }
 
-async function uploadBannerImage(file) {
-  if (!file) return;
-
-  if (!state.isAdmin) {
-    setMessage(bannerMessage, 'Nur Admins können Banner hochladen.', 'error');
-    return;
-  }
-
-  if (!ALLOWED_MIME.includes(file.type)) {
-    setMessage(bannerMessage, 'Dateityp für Banner nicht erlaubt.', 'error');
-    return;
-  }
-
-  if (file.size > MAX_BYTES) {
-    setMessage(bannerMessage, 'Banner-Bild ist zu gross (max. 8 MB).', 'error');
-    return;
-  }
-
-  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
-  const key = `homepage-banner/banner-${Date.now()}.${ext}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from('photos')
-    .upload(key, file, { cacheControl: '3600', contentType: file.type, upsert: true });
-
-  if (uploadError) {
-    setMessage(bannerMessage, `Banner-Bild konnte nicht hochgeladen werden: ${uploadError.message}`, 'error');
-    return;
-  }
-
-  const previousPath = resolveStoragePathFromPublicUrl(state.bannerImageUrl || '');
-  if (previousPath?.startsWith('homepage-banner/') && previousPath !== key) {
-    await supabase.storage.from('photos').remove([previousPath]).catch(() => {});
-  }
-
-  const { data: publicData } = supabase.storage.from('photos').getPublicUrl(key);
-  state.bannerImageUrl = publicData.publicUrl;
-  updateCustomBannerOptionPreview();
-
-  const customRadio = bannerRadios.find(radio => radio.value === 'custom');
-  if (customRadio) customRadio.checked = true;
-  updateBannerPreview('custom');
-
-  setMessage(bannerMessage, 'Banner-Bild hochgeladen. Bitte noch auf "Banner speichern" klicken.', 'success');
-}
-
 function updateBannerPreview(variant) {
   const config = BANNER_OPTIONS[variant] || BANNER_OPTIONS.team;
-  bannerPreview.src = resolveBannerImage(variant);
+  bannerPreview.src = config.src;
   bannerPreview.alt = `${config.label} Banner Vorschau`;
-}
-
-function updateCustomBannerOptionPreview() {
-  if (!bannerCustomOptionPreview) return;
-  bannerCustomOptionPreview.src = resolveBannerImage('custom');
 }
 
 async function loadInstagramSettings() {
@@ -961,12 +858,12 @@ async function saveInstagramSettings() {
   }
 
   if (payload.postUrl && !isProbablyUrl(payload.postUrl)) {
-    setMessage(instagramMessage, 'Bitte einen gültigen Instagram-Link eintragen.', 'error');
+    setMessage(instagramMessage, 'Bitte einen gueltigen Instagram-Link eintragen.', 'error');
     return;
   }
 
   if (payload.imageUrl && !isProbablyUrl(payload.imageUrl)) {
-    setMessage(instagramMessage, 'Bitte eine gültige direkte Bild- oder Cover-URL eintragen.', 'error');
+    setMessage(instagramMessage, 'Bitte eine gueltige direkte Bild- oder Cover-URL eintragen.', 'error');
     return;
   }
 
@@ -985,7 +882,7 @@ async function saveInstagramSettings() {
   }
 
   updateInstagramPreview();
-  setMessage(instagramMessage, 'Instagram-Beitrag für die Startseite gespeichert.', 'success');
+  setMessage(instagramMessage, 'Instagram-Beitrag fuer die Startseite gespeichert.', 'success');
 }
 
 async function loadTeamMembers() {
@@ -1004,6 +901,11 @@ async function loadTeamMembers() {
 }
 
 async function saveTeamMembers() {
+  if (!state.isAdmin) {
+    setMessage(teamMembersMessage, 'Nur Admins koennen Team-Kacheln speichern.', 'error');
+    return;
+  }
+
   const payload = normalizeTeamMembers(state.teamMembers);
 
   if (!payload.length) {
@@ -1022,11 +924,45 @@ async function saveTeamMembers() {
   setMessage(teamMembersMessage, 'Team-Daten gespeichert.', 'success');
 }
 
+function addTeamMember() {
+  if (!state.isAdmin) {
+    setMessage(teamMembersMessage, 'Nur Admins koennen neue Team-Kacheln anlegen.', 'error');
+    return;
+  }
+
+  const nowId = generateTeamMemberId();
+  const members = normalizeTeamMembers(state.teamMembers);
+  const maxSort = members.reduce((acc, entry) => Math.max(acc, Number(entry.sort_order) || 0), 0);
+  const nextSort = Math.min(999, Math.max(1, maxSort + 10));
+
+  state.teamMembers = [
+    ...members,
+    {
+      id: nowId,
+      name: '',
+      role: '',
+      description: '',
+      image_url: '',
+      is_leader: false,
+      sort_order: nextSort
+    }
+  ];
+
+  renderTeamMembersEditor();
+  setMessage(teamMembersMessage, 'Neue Kachel hinzugefuegt. Bitte noch "Team speichern" klicken.', 'info');
+
+  requestAnimationFrame(() => {
+    const node = teamMembersEditor?.querySelector(`[data-member-id="${cssEscape(nowId)}"] [data-field="name"]`);
+    node?.focus?.();
+  });
+}
+
 function renderTeamMembersEditor() {
   if (!teamMembersEditor) return;
 
   const members = normalizeTeamMembers(state.teamMembers);
   state.teamMembers = members;
+  const isReadOnly = !state.isAdmin;
 
   if (!members.length) {
     teamMembersEditor.innerHTML = '<div class="table-empty">Noch keine Team-Mitglieder hinterlegt.</div>';
@@ -1036,52 +972,79 @@ function renderTeamMembersEditor() {
   teamMembersEditor.innerHTML = members.map(member => `
     <article class="team-editor-card ${member.is_leader ? 'is-leader' : ''}" data-member-id="${escapeHtmlAttr(member.id)}">
       <div class="team-editor-head">
-        <div>
-          <strong>${escapeHtml(member.name || 'Unbenanntes Mitglied')}</strong>
+        <div class="team-editor-identity">
+          <img class="team-editor-avatar" src="${escapeHtmlAttr(resolveTeamMemberImage(member.image_url))}" alt="" onerror="this.src='images/logo.png'">
+          <div class="team-editor-title">
+            <strong title="${escapeHtmlAttr(member.name || 'Unbenanntes Mitglied')}">${escapeHtml(member.name || 'Unbenanntes Mitglied')}</strong>
+            <div class="team-editor-sub">ID: ${escapeHtml(member.id)} &middot; Sortierung: ${escapeHtml(String(member.sort_order))}</div>
+          </div>
         </div>
-        <div class="team-editor-badges">
-          <span class="team-editor-badge ${member.is_leader ? 'is-leader' : ''}">${member.is_leader ? 'Teamführung' : 'Operator'}</span>
-          <span class="team-editor-badge">Sortierung ${member.sort_order}</span>
+
+        <div class="team-editor-actions">
+          ${isReadOnly ? '' : `
+            <button type="button" class="btn-tertiary" data-action="move-up" title="Nach oben">↑</button>
+            <button type="button" class="btn-tertiary" data-action="move-down" title="Nach unten">↓</button>
+            <button type="button" class="btn-secondary" data-action="choose-team-image">Bild auswaehlen</button>
+            <input class="team-editor-file" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-action="team-image-file">
+          `}
+        </div>
+
+        <div class="team-editor-badges" aria-label="Metadaten">
+          <span class="team-editor-badge ${member.is_leader ? 'is-leader' : ''}">${member.is_leader ? 'Teamfuehrung' : 'Operator'}</span>
+          <span class="team-editor-badge">${member.image_url ? 'Bild gesetzt' : 'Kein Bild'}</span>
         </div>
       </div>
+
       <div class="team-editor-layout">
         <div class="team-editor-media">
           <img class="team-editor-image" src="${escapeHtmlAttr(resolveTeamMemberImage(member.image_url))}" alt="${escapeHtmlAttr(member.name || 'Teammitglied')}" data-preview-image onerror="this.src='images/logo.png'">
-          <div class="team-editor-actions">
-            <button type="button" class="btn-secondary" data-action="choose-team-image">Bild auswählen</button>
-            <input class="team-editor-file" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-action="team-image-file">
-          </div>
-          <div class="team-editor-note">Empfohlen: quadratisches Bild als JPG, PNG, WebP oder GIF.</div>
+          <div class="team-editor-note">Tipp: quadratisches Bild (JPG/PNG/WebP/GIF), max. 8 MB.</div>
         </div>
+
         <div class="team-editor-meta">
           <div class="form-row form-row-two">
             <label class="field">
               <span>Name</span>
-              <input type="text" value="${escapeHtmlAttr(member.name)}" data-field="name" maxlength="120">
+              <input type="text" value="${escapeHtmlAttr(member.name)}" data-field="name" maxlength="120" placeholder="z.B. Max Mustermann" ${isReadOnly ? 'disabled' : ''}>
             </label>
             <label class="field">
               <span>Rolle</span>
-              <input type="text" value="${escapeHtmlAttr(member.role)}" data-field="role" maxlength="80">
+              <input type="text" value="${escapeHtmlAttr(member.role)}" data-field="role" maxlength="80" placeholder="z.B. Medic / Support" ${isReadOnly ? 'disabled' : ''}>
             </label>
           </div>
-          <div class="form-row form-row-two">
-            <label class="field">
-              <span>Bild-URL</span>
-              <input type="text" value="${escapeHtmlAttr(member.image_url)}" data-field="image_url" maxlength="500">
-            </label>
-            <label class="field">
-              <span>Sortierung</span>
-              <input type="number" value="${escapeHtmlAttr(member.sort_order)}" data-field="sort_order" min="1" max="999">
-            </label>
-          </div>
+
           <label class="team-editor-toggle">
-            <input type="checkbox" data-field="is_leader" ${member.is_leader ? 'checked' : ''}>
-            <span>Zur Teamführung zählen</span>
+            <input type="checkbox" data-field="is_leader" ${member.is_leader ? 'checked' : ''} ${isReadOnly ? 'disabled' : ''}>
+            <span>Zur Teamfuehrung zaehlen</span>
           </label>
+
           <label class="field">
             <span>Beschreibung</span>
-            <textarea class="upload-caption-input" maxlength="500" data-field="description" placeholder="Beschreibung für die Team-Seite.">${escapeHtml(member.description)}</textarea>
+            <textarea class="upload-caption-input" maxlength="500" data-field="description" placeholder="Beschreibung fuer die Team-Seite." ${isReadOnly ? 'disabled' : ''}>${escapeHtml(member.description)}</textarea>
           </label>
+
+          <details class="team-editor-advanced">
+            <summary>Erweitert</summary>
+            <div class="form-row form-row-two team-editor-advanced-body">
+              <label class="field">
+                <span>Bild-URL (optional)</span>
+                <input type="text" value="${escapeHtmlAttr(member.image_url)}" data-field="image_url" maxlength="500" placeholder="https://... oder leer lassen" ${isReadOnly ? 'disabled' : ''}>
+              </label>
+              <label class="field">
+                <span>Sortierung</span>
+                <input type="number" value="${escapeHtmlAttr(member.sort_order)}" data-field="sort_order" min="1" max="999" ${isReadOnly ? 'disabled' : ''}>
+              </label>
+            </div>
+          </details>
+
+          ${isReadOnly ? `
+            <div class="team-editor-note">Nur Admins koennen Team-Kacheln bearbeiten.</div>
+          ` : `
+            <div class="team-editor-danger">
+              <p>Entfernt die Kachel aus dem Team. Danach unbedingt auf <strong>Team speichern</strong> klicken.</p>
+              <button type="button" class="btn-danger" data-action="delete-team-member">Kachel loeschen</button>
+            </div>
+          `}
         </div>
       </div>
     </article>`).join('');
@@ -1116,6 +1079,78 @@ function renderTeamMembersEditor() {
       await uploadTeamMemberImage(card?.dataset.memberId, file);
     });
   });
+
+  teamMembersEditor.querySelectorAll('[data-action="delete-team-member"]').forEach(button => {
+    button.addEventListener('click', async () => {
+      const card = button.closest('[data-member-id]');
+      await deleteTeamMember(card?.dataset.memberId);
+    });
+  });
+
+  teamMembersEditor.querySelectorAll('[data-action="move-up"]').forEach(button => {
+    button.addEventListener('click', () => {
+      const card = button.closest('[data-member-id]');
+      moveTeamMember(card?.dataset.memberId, -1);
+    });
+  });
+
+  teamMembersEditor.querySelectorAll('[data-action="move-down"]').forEach(button => {
+    button.addEventListener('click', () => {
+      const card = button.closest('[data-member-id]');
+      moveTeamMember(card?.dataset.memberId, 1);
+    });
+  });
+}
+
+function moveTeamMember(memberId, direction) {
+  if (!state.isAdmin) return;
+  if (!memberId || !direction) return;
+  const members = normalizeTeamMembers(state.teamMembers);
+  const index = members.findIndex(entry => entry.id === memberId);
+  if (index < 0) return;
+
+  const member = members[index];
+  const step = direction < 0 ? -1 : 1;
+  let otherIndex = index + step;
+  while (otherIndex >= 0 && otherIndex < members.length) {
+    if (members[otherIndex].is_leader === member.is_leader) break;
+    otherIndex += step;
+  }
+  if (otherIndex < 0 || otherIndex >= members.length) return;
+
+  const other = members[otherIndex];
+  const next = members.map(entry => {
+    if (entry.id === member.id) return { ...entry, sort_order: other.sort_order };
+    if (entry.id === other.id) return { ...entry, sort_order: member.sort_order };
+    return entry;
+  });
+
+  state.teamMembers = next;
+  renderTeamMembersEditor();
+  setMessage(teamMembersMessage, 'Reihenfolge angepasst. Bitte noch "Team speichern" klicken.', 'info');
+}
+
+async function deleteTeamMember(memberId) {
+  if (!state.isAdmin) return;
+  if (!memberId) return;
+
+  const member = state.teamMembers.find(entry => entry.id === memberId);
+  const label = member?.name ? `"${member.name}"` : memberId;
+  if (!confirm(`Teammitglied ${label} wirklich loeschen?`)) return;
+
+  const previousPath = resolveStoragePathFromPublicUrl(member?.image_url || '');
+  if (previousPath?.startsWith('team-members/')) {
+    await supabase.storage.from('photos').remove([previousPath]).catch(() => {});
+  }
+
+  state.teamMembers = normalizeTeamMembers(state.teamMembers).filter(entry => entry.id !== memberId);
+  renderTeamMembersEditor();
+  setMessage(teamMembersMessage, 'Kachel geloescht. Bitte noch "Team speichern" klicken.', 'success');
+}
+
+function generateTeamMemberId() {
+  const rand = Math.random().toString(16).slice(2, 8);
+  return `member-${Date.now().toString(16)}-${rand}`.slice(0, 40);
 }
 
 function updateTeamMemberField(memberId, field, value, inputNode = null) {
@@ -1149,7 +1184,7 @@ async function uploadTeamMemberImage(memberId, file) {
   if (!memberId || !file) return;
 
   if (!ALLOWED_MIME.includes(file.type)) {
-    setMessage(teamMembersMessage, 'Dateityp für Team-Bilder nicht erlaubt.', 'error');
+    setMessage(teamMembersMessage, 'Dateityp fuer Team-Bilder nicht erlaubt.', 'error');
     return;
   }
 
@@ -1205,26 +1240,18 @@ function normalizeTeamMembers(rawMembers) {
 
 function defaultTeamMembers() {
   return [
-    { id: 'ben', name: 'Yotzek (Ben)', role: 'Teamführer', description: 'Ben koordiniert die Truppe und bewahrt selbst im Gefecht einen kühlen Kopf.', image_url: 'images/benf.png', is_leader: true, sort_order: 10 },
-    { id: 'jason', name: 'sneiper0 (Jason)', role: 'Sniper', description: 'Präzisionsschütze der Ragebaiters.', image_url: 'images/logo.png', is_leader: false, sort_order: 20 },
-    { id: 'michael', name: 'MundMbrothers (Michael)', role: 'Medic', description: 'Sorgt für die Einsatzfähigkeit des Teams.', image_url: 'images/michi2.png', is_leader: false, sort_order: 30 },
-    { id: 'nils', name: 'Disccave (Nils)', role: 'Breacher / OG', description: 'Einer der OGs. Experte für Improvisation.', image_url: 'images/nils.png', is_leader: false, sort_order: 40 },
+    { id: 'ben', name: 'Yotzek (Ben)', role: 'Teamfuehrer', description: 'Ben koordiniert die Truppe und bewahrt selbst im Gefecht einen kuehlen Kopf.', image_url: 'images/benf.png', is_leader: true, sort_order: 10 },
+    { id: 'jason', name: 'sneiper0 (Jason)', role: 'Sniper', description: 'Praezisionsschuetze der Ragebaiters.', image_url: 'images/logo.png', is_leader: false, sort_order: 20 },
+    { id: 'michael', name: 'MundMbrothers (Michael)', role: 'Medic', description: 'Sorgt fuer die Einsatzfaehigkeit des Teams.', image_url: 'images/michi2.png', is_leader: false, sort_order: 30 },
+    { id: 'nils', name: 'Disccave (Nils)', role: 'Breacher / OG', description: 'Einer der OGs. Experte fuer Improvisation.', image_url: 'images/nils.png', is_leader: false, sort_order: 40 },
     { id: 'nathan', name: 'Nathan Goldstein (Nathan)', role: 'Support', description: 'Gibt Feuerschutz mit hohem Munitionsdurchsatz.', image_url: 'images/nathan.png', is_leader: false, sort_order: 50 },
-    { id: 'riccardo', name: 'Gemeral Richard (Riccardo)', role: 'Breacher', description: 'Spezialist für CQB.', image_url: 'images/riccardo.png', is_leader: false, sort_order: 60 },
-    { id: 'wolfgang', name: 'Wolfgang', role: 'Techniker', description: 'Hält die Markierer am Laufen.', image_url: 'images/wolfgang.png', is_leader: false, sort_order: 70 }
+    { id: 'riccardo', name: 'Gemeral Richard (Riccardo)', role: 'Breacher', description: 'Spezialist fuer CQB.', image_url: 'images/riccardo.png', is_leader: false, sort_order: 60 },
+    { id: 'wolfgang', name: 'Wolfgang', role: 'Techniker', description: 'Haelt die Markierer am Laufen.', image_url: 'images/wolfgang.png', is_leader: false, sort_order: 70 }
   ];
 }
 
 function resolveTeamMemberImage(path) {
   return path || 'images/logo.png';
-}
-
-function resolveBannerImage(variant) {
-  if (variant === 'custom' && state.bannerImageUrl) {
-    return state.bannerImageUrl;
-  }
-
-  return (BANNER_OPTIONS[variant] || BANNER_OPTIONS.team).src;
 }
 
 function resolveStoragePathFromPublicUrl(url) {
@@ -1291,7 +1318,7 @@ function updateInstagramPreview() {
           </div>
           <div class="instagram-post-actions">
             ${primaryAction}
-            <a class="instagram-post-secondary" href="https://www.instagram.com/die_ragebaiters/" target="_blank" rel="noopener">Profil öffnen</a>
+            <a class="instagram-post-secondary" href="https://www.instagram.com/die_ragebaiters/" target="_blank" rel="noopener">Profil oeffnen</a>
           </div>
         </div>
       </div>
@@ -1448,7 +1475,7 @@ async function loadUsers() {
       <td>
         <div class="table-actions">
           <button type="button" class="btn-tertiary" data-action="save-user">Speichern</button>
-          <button type="button" class="btn-danger" data-action="delete-user" ${entry.id === state.user.id ? 'disabled' : ''}>Löschen</button>
+          <button type="button" class="btn-danger" data-action="delete-user" ${entry.id === state.user.id ? 'disabled' : ''}>Loeschen</button>
         </div>
       </td>
     </tr>`).join('');
@@ -1488,7 +1515,7 @@ async function loadUsers() {
       }
 
       const username = row.querySelector('[data-field="username"]').value.trim() || 'dieses Konto';
-      if (!confirm(`Benutzer ${username} wirklich löschen?`)) return;
+      if (!confirm(`Benutzer ${username} wirklich loeschen?`)) return;
 
       btn.disabled = true;
       await removeUserPhotosFromStorage(userId);
@@ -1496,16 +1523,16 @@ async function loadUsers() {
       btn.disabled = false;
 
       if (deleteError) {
-        setMessage(userMessage, `Benutzer konnte nicht gelöscht werden: ${deleteError.message}`, 'error');
+        setMessage(userMessage, `Benutzer konnte nicht geloescht werden: ${deleteError.message}`, 'error');
         return;
       }
 
       if (!deleted) {
-        setMessage(userMessage, 'Benutzer konnte nicht gelöscht werden. Bitte Seite neu laden und erneut versuchen.', 'error');
+        setMessage(userMessage, 'Benutzer konnte nicht geloescht werden. Bitte Seite neu laden und erneut versuchen.', 'error');
         return;
       }
 
-      setMessage(userMessage, `Benutzer gelöscht: ${username}`, 'success');
+      setMessage(userMessage, `Benutzer geloescht: ${username}`, 'success');
       await loadUsers();
     });
   });
@@ -1520,7 +1547,7 @@ async function removeUserPhotosFromStorage(userId) {
     .eq('user_id', userId);
 
   if (error) {
-    console.warn('[Ragebaiters] User-Fotos konnten vor dem Löschen nicht geladen werden:', error);
+    console.warn('[Ragebaiters] User-Fotos konnten vor dem Loeschen nicht geladen werden:', error);
     return;
   }
 
@@ -1532,7 +1559,7 @@ async function removeUserPhotosFromStorage(userId) {
 
   const { error: storageError } = await supabase.storage.from('photos').remove(paths);
   if (storageError) {
-    console.warn('[Ragebaiters] User-Fotos konnten vor dem Löschen nicht vollständig entfernt werden:', storageError);
+    console.warn('[Ragebaiters] User-Fotos konnten vor dem Loeschen nicht vollstaendig entfernt werden:', storageError);
   }
 }
 
@@ -1672,15 +1699,15 @@ function mapTestAccountError(error) {
   const message = String(error?.message || error || '');
 
   if (/admin_get_test_account_access/i.test(message) && /schema cache/i.test(message)) {
-    return 'Die neue Supabase-Funktion fehlt noch. Bitte die aktuelle supabase_admin_dashboard.sql einmal komplett im Supabase SQL Editor ausführen.';
+    return 'Die neue Supabase-Funktion fehlt noch. Bitte die aktuelle supabase_admin_dashboard.sql einmal komplett im Supabase SQL Editor ausfuehren.';
   }
 
   if (/admin_rotate_test_account_access/i.test(message) && /schema cache/i.test(message)) {
-    return 'Die automatische Testaccount-Rotation fehlt noch in Supabase. Bitte die aktuelle supabase_admin_dashboard.sql einmal komplett ausführen.';
+    return 'Die automatische Testaccount-Rotation fehlt noch in Supabase. Bitte die aktuelle supabase_admin_dashboard.sql einmal komplett ausfuehren.';
   }
 
   if (/admin_prepare_test_account/i.test(message) && /schema cache/i.test(message)) {
-    return 'Die Testaccount-Vorbereitung fehlt noch in Supabase. Bitte die aktuelle supabase_admin_dashboard.sql einmal komplett ausführen.';
+    return 'Die Testaccount-Vorbereitung fehlt noch in Supabase. Bitte die aktuelle supabase_admin_dashboard.sql einmal komplett ausfuehren.';
   }
 
   return message || 'Unbekannter Fehler';
@@ -1698,4 +1725,15 @@ function escapeHtml(value) {
 
 function escapeHtmlAttr(value) {
   return escapeHtml(value).replace(/`/g, '&#96;');
+}
+
+function cssEscape(value) {
+  const raw = String(value ?? '');
+  if (window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(raw);
+
+  return raw.replace(/[^a-zA-Z0-9_-]/g, char => {
+    const code = char.codePointAt(0);
+    if (!code) return '';
+    return `\\${code.toString(16)} `;
+  });
 }

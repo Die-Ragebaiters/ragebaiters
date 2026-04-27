@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard | die Ragebaiters</title>
   <link rel="icon" type="image/png" href="images/logo.png">
-  <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="./styles.css?v=2026-04-23-6">
+  <link rel="stylesheet" href="./app.css?v=2026-04-23-6">
 </head>
-<body>
+<body class="page-dashboard">
 
   <div class="top-banner">
     <img src="images/banner2.png" alt="die Ragebaiters Banner" />
@@ -52,33 +52,28 @@
     </section>
 
     <section class="section" id="mainSection" hidden>
-      <span class="eyebrow">Interner Bereich</span>
-      <div class="dashboard-header">
-        <div>
-          <h2 style="margin: 10px 0 4px;">Willkommen, <span id="hello">...</span></h2>
-          <p style="color: var(--muted); margin: 0;">Verwalte hier Uploads, Einladungen, Startseiten-Banner und Benutzer.</p>
-          <p style="color: var(--accent); margin: 8px 0 0; font-size: 0.9rem; font-weight: 700;">Dashboard-Version: 2026-04-24 Banner Access</p>
+      <div class="dash-hero card">
+        <div class="dash-hero-top">
+          <div class="dash-kicker">Admin / Mitgliederbereich</div>
+          <div class="dashboard-role" id="roleBadge">Mitglied</div>
         </div>
-        <div class="dashboard-role" id="roleBadge">Mitglied</div>
+        <h1 class="dash-title">Hi <span id="hello">...</span></h1>
+        <p class="dash-subtitle">Verwalte Uploads, Team-Kacheln, Einladungen, Banner und Benutzer – alles an einem Ort.</p>
+        <div class="dash-quick">
+          <a class="dash-quick-btn" href="#welcome">Start</a>
+          <a class="dash-quick-btn role-member-up" href="#uploads">Uploads</a>
+          <a class="dash-quick-btn" href="#team">Team</a>
+          <a class="dash-quick-btn role-member-up" href="#users">Mitglieder</a>
+          <a class="dash-quick-btn role-admin-only" href="#invites">Einladungen</a>
+          <a class="dash-quick-btn role-admin-only" href="#banner">Banner</a>
+        </div>
+        <div class="dash-note" id="memberNote" hidden>
+          Dein Zugriff richtet sich nach deiner Rolle. Admin-Funktionen bleiben nur fuer Team-Admins sichtbar.
+        </div>
       </div>
 
-      <div class="dashboard-shell">
-        <aside class="dashboard-sidebar card">
-          <div class="dashboard-sidebar-title">Bereiche</div>
-          <div class="dashboard-tabs" id="dashboardTabs">
-            <button type="button" class="dashboard-tab is-active" data-view="welcome">Willkommen</button>
-            <button type="button" class="dashboard-tab role-member-up" data-view="uploads">Uploads</button>
-            <button type="button" class="dashboard-tab role-member-up" data-view="users">Mitglieder</button>
-            <button type="button" class="dashboard-tab role-admin-only" data-view="invites">Einladungscodes</button>
-            <button type="button" class="dashboard-tab" data-view="banner">Startseiten-Banner</button>
-            <button type="button" class="dashboard-tab" data-view="team">Team</button>
-          </div>
-          <div class="dashboard-sidebar-note" id="memberNote" hidden>
-            Dein Zugriff richtet sich nach deiner Rolle. Admin-Funktionen bleiben nur für Team-Admins sichtbar.
-          </div>
-        </aside>
-
-        <div class="dashboard-content">
+      <div class="dash-layout">
+        <div class="dash-main dashboard-content">
           <section class="dashboard-view is-active" id="view-welcome">
             <div class="card admin-card welcome-card">
               <div class="panel-head compact">
@@ -90,10 +85,10 @@
               <div class="welcome-grid" id="welcomeCapabilities"></div>
               <article class="card capability-card test-account-card role-admin-view" id="testAccountCard" hidden>
                 <span>Testaccount</span>
-                <strong>Parallel geöffnet</strong>
-                <p>Öffnet einen getrennten Observer-Testaccount in einem neuen Tab. Dein eigener Admin-Login bleibt dabei aktiv.</p>
+                <strong>Parallel geoeffnet</strong>
+                <p>Oeffnet einen getrennten Observer-Testaccount in einem neuen Tab. Dein eigener Admin-Login bleibt dabei aktiv.</p>
                 <div class="form-actions">
-                  <button type="button" class="btn-secondary" id="openTestAccountBtn">Testaccount öffnen</button>
+                  <button type="button" class="btn-secondary" id="openTestAccountBtn">Testaccount oeffnen</button>
                 </div>
                 <div class="admin-message" id="testAccountMessage" hidden></div>
               </article>
@@ -104,7 +99,7 @@
             <div class="panel-head">
               <div>
                 <h3>Uploads & Mediathek</h3>
-                <p>Lade hier Fotos hoch. Observer-Uploads müssen erst von einem Admin freigegeben werden.</p>
+                <p>Lade hier Fotos hoch. Observer-Uploads muessen erst von einem Admin freigegeben werden.</p>
               </div>
             </div>
 
@@ -118,7 +113,7 @@
                     id="captionInput"
                     class="upload-caption-input"
                     maxlength="500"
-                    placeholder="Optionaler Text zum Bild. Wenn du mehrere Bilder gleichzeitig auswählst, wird dieser Text für alle übernommen."
+                    placeholder="Optionaler Text zum Bild. Wenn du mehrere Bilder gleichzeitig auswaehlst, wird dieser Text fuer alle uebernommen."
                   ></textarea>
                 </label>
                 <div class="upload-meta-hint">Maximal 500 Zeichen. Der Dateiname bleibt weiterhin der Bildtitel.</div>
@@ -132,7 +127,7 @@
                   <line x1="12" y1="3" x2="12" y2="15"/>
                 </svg>
                 <h3 style="margin: 10px 0 6px;">Bilder hier ablegen</h3>
-                <p style="color: var(--muted); margin: 0;">oder klicken zum Auswählen</p>
+                <p style="color: var(--muted); margin: 0;">oder klicken zum Auswaehlen</p>
                 <p style="color: var(--muted); font-size: 0.8rem; margin-top: 10px;">
                   JPG, PNG, WebP, GIF · max. 8 MB pro Datei
                 </p>
@@ -151,8 +146,8 @@
 
             <div class="panel-head panel-head-spaced role-admin-view" hidden>
               <div>
-                <h3>Upload-Prüfung</h3>
-                <p>Observer-Uploads prüfen, freigeben oder intern als Troll-Post umwandeln.</p>
+                <h3>Upload-Pruefung</h3>
+                <p>Observer-Uploads pruefen, freigeben oder intern als Troll-Post umwandeln.</p>
               </div>
             </div>
             <div id="pendingReviews" class="role-admin-view" hidden></div>
@@ -162,7 +157,7 @@
             <div class="panel-head">
               <div>
                 <h3>Einladungscodes</h3>
-                <p>Codes erstellen, kopieren, löschen und die Nutzung direkt kontrollieren.</p>
+                <p>Codes erstellen, kopieren, loeschen und die Nutzung direkt kontrollieren.</p>
               </div>
               <button type="button" class="btn-secondary" id="refreshInvitesBtn">Aktualisieren</button>
             </div>
@@ -196,7 +191,7 @@
                     <input type="text" id="inviteCodeInput" maxlength="64" placeholder="z.B. TEAM-APRIL-2026">
                   </label>
                   <label class="field">
-                    <span>Gedacht für</span>
+                    <span>Gedacht fuer</span>
                     <input type="text" id="inviteForInput" maxlength="120" placeholder="z.B. Max / neues Teammitglied">
                   </label>
                 </div>
@@ -224,7 +219,7 @@
                   <thead>
                     <tr>
                       <th>Code</th>
-                      <th>Gedacht für</th>
+                      <th>Gedacht fuer</th>
                       <th>Rolle</th>
                       <th>Status</th>
                       <th>Erstellt</th>
@@ -243,15 +238,12 @@
             </div>
           </section>
 
-          <section class="dashboard-view" id="view-banner" hidden>
+          <section class="dashboard-view role-admin-view" id="view-banner" hidden>
             <div class="panel-head">
               <div>
                 <h3>Startseite verwalten</h3>
                 <p>Pflege hier Banner und den Instagram-Beitrag, der unten auf der Startseite erscheinen soll.</p>
               </div>
-            </div>
-            <div class="card access-note" id="bannerAccessHint" hidden>
-              Du kannst die aktuelle Startseiten-Konfiguration sehen, aber nur Admins dürfen Banner und Instagram-Einstellungen ändern.
             </div>
 
             <div class="banner-settings-grid">
@@ -272,29 +264,15 @@
                 </div>
                 <img src="images/banner2.png" alt="Team Banner Vorschau">
               </label>
-
-              <label class="card banner-choice">
-                <input type="radio" name="homepageBanner" value="custom">
-                <div class="banner-choice-copy">
-                  <strong>Eigenes Banner</strong>
-                  <span>Lade ein eigenes Banner hoch und nutze es auf der Startseite.</span>
-                </div>
-                <img id="bannerCustomOptionPreview" src="images/banner2.png" alt="Eigenes Banner Vorschau">
-              </label>
             </div>
 
             <div class="card admin-card">
               <div class="panel-head compact">
                 <div>
                   <h3>Aktive Auswahl</h3>
-                  <p>Nur Admins können Banner ändern. Lade optional ein eigenes Banner hoch und speichere danach die Auswahl.</p>
+                  <p>Die Auswahl wird sofort fuer die Startseite gespeichert.</p>
                 </div>
                 <button type="button" class="btn-primary" id="saveBannerBtn">Banner speichern</button>
-              </div>
-              <div class="banner-upload-actions">
-                <label class="btn-secondary file-trigger" for="bannerImageInput">Banner-Bild hochladen</label>
-                <input type="file" id="bannerImageInput" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
-                <span class="banner-upload-hint">Erlaubt sind JPG, PNG, WEBP oder GIF bis 8 MB.</span>
               </div>
               <div class="banner-preview-wrap">
                 <img id="bannerPreview" class="banner-preview-image" src="images/banner2.png" alt="Banner Vorschau">
@@ -305,7 +283,7 @@
             <div class="card admin-card">
               <div class="panel-head compact">
                 <div>
-                  <h3>Instagram-Beitrag für die Startseite</h3>
+                  <h3>Instagram-Beitrag fuer die Startseite</h3>
                   <p>Hier hinterlegst du den einen Beitrag oder Reel, der unten auf der Startseite im Seitendesign angezeigt wird.</p>
                 </div>
                 <button type="button" class="btn-primary" id="saveInstagramBtn">Instagram speichern</button>
@@ -335,7 +313,7 @@
 
               <div class="form-row form-row-two">
                 <label class="field">
-                  <span>Veröffentlicht am (optional)</span>
+                  <span>Veroeffentlicht am (optional)</span>
                   <input type="datetime-local" id="instagramPostedAtInput">
                 </label>
                 <div class="dashboard-sidebar-note instagram-admin-hint">
@@ -350,7 +328,7 @@
                     id="instagramCaptionInput"
                     class="upload-caption-input"
                     maxlength="500"
-                    placeholder="Optional: kurzer Text, Caption oder Beschreibung für die Startseite."
+                    placeholder="Optional: kurzer Text, Caption oder Beschreibung fuer die Startseite."
                   ></textarea>
                 </label>
               </div>
@@ -373,11 +351,11 @@
             <div class="panel-head">
               <div>
                 <h3>Team verwalten</h3>
-                <p>Bilder, Kacheln und Verknüpfungen zu Benutzerkonten direkt hier pflegen.</p>
+                <p>Bilder, Kacheln und Verknuepfungen zu Benutzerkonten direkt hier pflegen.</p>
               </div>
               <div class="form-actions">
-                <button type="button" class="btn-secondary" id="addTeamMemberBtn">Neue Kachel</button>
-                <button type="button" class="btn-primary" id="saveTeamMembersBtn">Team speichern</button>
+                <button type="button" class="btn-secondary role-admin-only" id="addTeamMemberBtn">Neue Kachel</button>
+                <button type="button" class="btn-primary role-admin-only" id="saveTeamMembersBtn">Team speichern</button>
               </div>
             </div>
 
@@ -385,7 +363,7 @@
               <div class="panel-head compact">
                 <div>
                   <h3>Team-Mitglieder</h3>
-                  <p>Admins können Kacheln anlegen, löschen und mit Benutzerkonten verknüpfen. Verknüpfte Personen können ihre eigene Kachel später selbst pflegen.</p>
+                  <p>Admins koennen Kacheln anlegen, loeschen und mit Benutzerkonten verknuepfen. Verknuepfte Personen koennen ihre eigene Kachel spaeter selbst pflegen.</p>
                 </div>
               </div>
               <div id="teamMembersEditor" class="team-editor-grid">
@@ -437,8 +415,8 @@
     <div style="font-size: 0.8rem; opacity: 0.6;">Est. 2026 • Made by sneiper0</div>
   </footer>
 
-  <script src="nav.js?v=2026-04-23-1" defer></script>
-  <script src="config.js"></script>
-  <script type="module" src="dashboard.js?v=2026-04-24-2"></script>
+  <script src="./nav.js?v=2026-04-23-5" defer></script>
+  <script src="./config.js?v=2026-04-23-5"></script>
+  <script type="module" src="./dashboard.js?v=2026-04-23-5"></script>
 </body>
 </html>

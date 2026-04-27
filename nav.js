@@ -15,37 +15,33 @@
     }
 
     const close = () => {
-      nav.classList.remove('is-open');
-      backdrop.classList.remove('is-open');
+      links.classList.remove('open');
+      backdrop.classList.remove('open');
       toggle.setAttribute('aria-expanded', 'false');
       document.body.classList.remove('nav-lock');
     };
 
     const open = () => {
-      nav.classList.add('is-open');
-      backdrop.classList.add('is-open');
+      links.classList.add('open');
+      backdrop.classList.add('open');
       toggle.setAttribute('aria-expanded', 'true');
       document.body.classList.add('nav-lock');
     };
 
     const syncDesktop = () => {
-      if (window.matchMedia('(min-width: 1000px)').matches) close();
+      if (window.matchMedia('(min-width: 681px)').matches) close();
     };
 
     toggle.addEventListener('click', () => {
-      const isOpen = nav.classList.contains('is-open');
+      const isOpen = links.classList.contains('open');
       if (isOpen) close();
       else open();
     });
 
     backdrop.addEventListener('click', close);
-    links.addEventListener(
-      'click',
-      (event) => {
-        if (event.target && event.target.closest && event.target.closest('a')) close();
-      },
-      true
-    );
+    links.addEventListener('click', (event) => {
+      if (event.target && event.target.closest && event.target.closest('a')) close();
+    }, true);
 
     window.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') close();
