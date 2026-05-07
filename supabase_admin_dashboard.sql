@@ -673,9 +673,16 @@ create table if not exists public.arcade_game_score_entries (
   score integer not null check (score >= 0),
   created_at timestamptz not null default now(),
   constraint arcade_game_score_entries_game_key_check
-    check (game_key in ('doodle_jason', 'space_invaders')),
+    check (game_key in ('doodle_jason', 'space_invaders', 'superjason')),
   constraint arcade_game_score_entries_unique unique (game_key, user_id, score)
 );
+
+alter table public.arcade_game_score_entries
+  drop constraint if exists arcade_game_score_entries_game_key_check;
+
+alter table public.arcade_game_score_entries
+  add constraint arcade_game_score_entries_game_key_check
+  check (game_key in ('doodle_jason', 'space_invaders', 'superjason'));
 
 revoke all on public.arcade_game_score_entries from public, anon, authenticated;
 
@@ -768,7 +775,7 @@ begin
   end if;
 
   v_game_key := trim(lower(coalesce(p_game_key, '')));
-  if v_game_key not in ('doodle_jason', 'space_invaders') then
+  if v_game_key not in ('doodle_jason', 'space_invaders', 'superjason') then
     raise exception 'Ungueltiger Arcade-Spielschluessel: %', p_game_key;
   end if;
 
