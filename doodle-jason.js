@@ -156,6 +156,27 @@ const GAME_CONFIGS = {
       { title: 'Ausweichen', copy: 'Ueber Faesser springen, sonst verlierst du Leben. Das Bosslevel wird mit jeder Welle hektischer.' },
       { title: 'Ziel', copy: 'Erreiche in den ersten vier Levels das Ziel. Im Finale musst du den Boss von oben treffen.' }
     ]
+  },
+  oblock: {
+    key: 'oblock',
+    title: 'O-Block',
+    intro: 'Ein schneller Block-Stacker mit steigender Geschwindigkeit, Ghost-Piece, Hard-Drop und eigenem globalen Highscore.',
+    metaKicker: 'Steuerung',
+    metaTitle: 'Stack und Clear',
+    scoreboardTitle: 'O-Block Highscores',
+    canvasWidth: 516,
+    canvasHeight: 616,
+    displayWidth: 920,
+    canvasLabel: 'O-Block Spielbereich',
+    showAvatarCard: false,
+    touchActions: ['left', 'fire', 'right'],
+    touchLabels: { left: 'Links', fire: 'Dreh', right: 'Rechts' },
+    rules: [
+      { title: 'Bewegen', copy: 'Mit A/D oder Pfeil links und rechts den Stein verschieben.' },
+      { title: 'Drehen', copy: 'Mit W, Pfeil hoch oder dem Dreh-Button die Form rotieren.' },
+      { title: 'Tempo', copy: 'Mit S oder Pfeil runter weich fallen lassen, mit Leertaste direkt hard droppen.' },
+      { title: 'Punkte', copy: 'Linien loeschen, Level hochschrauben und den Stack moeglichst lange sauber halten.' }
+    ]
   }
 };
 
@@ -262,6 +283,11 @@ async function selectGame(gameKey) {
       onScore: points => submitArcadeScore(normalized, points),
       sprite: playerImg,
       label: playerIdentity.label
+    });
+  } else if (normalized === 'oblock') {
+    activeGame = createOBlockGame({
+      onStatus: setStatus,
+      onScore: points => submitArcadeScore(normalized, points)
     });
   } else {
     activeGame = createDoodleGame({
@@ -4043,6 +4069,804 @@ function createMonkeyKongGame({ onStatus, onScore, sprite, label }) {
 
   function rgba(color, alpha) {
     return `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${alpha})`;
+  }
+}
+
+function createOBlockGame({ onStatus, onScore }) {
+  const GAME_NAME = 'O-Block';
+  const COLS = 10;
+  const ROWS = 20;
+  const CELL = 28;
+  const BOARD_X = 28;
+  const BOARD_Y = 28;
+  const PANEL_W = 180;
+  const EMPTY = -1;
+  const BASE_FALL_INTERVAL = 700;
+  const MIN_FALL_INTERVAL = 120;
+  const SPEED_STEP = 55;
+  const TIME_LEVEL_MS = 25000;
+  const pointer = { x: -9999, y: -9999 };
+  const palette = [
+    [255, 99, 97],
+    [255, 179, 71],
+    [255, 235, 59],
+    [102, 187, 106],
+    [77, 208, 225],
+    [92, 107, 192],
+    [171, 71, 188]
+  ];
+  const SHAPES = [
+    [
+      [
+        [0, 0, 0, 0],
+        [1, 1, 1, 1],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      [
+        [0, 0, 1, 0],
+        [0, 0, 1, 0],
+        [0, 0, 1, 0],
+        [0, 0, 1, 0]
+      ],
+      [
+        [0, 0, 0, 0],
+        [1, 1, 1, 1],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      [
+        [0, 1, 0, 0],
+        [0, 1, 0, 0],
+        [0, 1, 0, 0],
+        [0, 1, 0, 0]
+      ]
+    ],
+    [
+      [
+        [1, 0, 0, 0],
+        [1, 1, 1, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      [
+        [0, 1, 1, 0],
+        [0, 1, 0, 0],
+        [0, 1, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      [
+        [0, 0, 0, 0],
+        [1, 1, 1, 0],
+        [0, 0, 1, 0],
+        [0, 0, 0, 0]
+      ],
+      [
+        [0, 1, 0, 0],
+        [0, 1, 0, 0],
+        [1, 1, 0, 0],
+        [0, 0, 0, 0]
+      ]
+    ],
+    [
+      [
+        [0, 0, 1, 0],
+        [1, 1, 1, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      [
+        [0, 1, 0, 0],
+        [0, 1, 0, 0],
+        [0, 1, 1, 0],
+        [0, 0, 0, 0]
+      ],
+      [
+        [0, 0, 0, 0],
+        [1, 1, 1, 0],
+        [1, 0, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      [
+        [1, 1, 0, 0],
+        [0, 1, 0, 0],
+        [0, 1, 0, 0],
+        [0, 0, 0, 0]
+      ]
+    ],
+    [
+      [
+        [0, 1, 1, 0],
+        [0, 1, 1, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      [
+        [0, 1, 1, 0],
+        [0, 1, 1, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      [
+        [0, 1, 1, 0],
+        [0, 1, 1, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      [
+        [0, 1, 1, 0],
+        [0, 1, 1, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ]
+    ],
+    [
+      [
+        [0, 1, 1, 0],
+        [1, 1, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      [
+        [0, 1, 0, 0],
+        [0, 1, 1, 0],
+        [0, 0, 1, 0],
+        [0, 0, 0, 0]
+      ],
+      [
+        [0, 1, 1, 0],
+        [1, 1, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      [
+        [0, 1, 0, 0],
+        [0, 1, 1, 0],
+        [0, 0, 1, 0],
+        [0, 0, 0, 0]
+      ]
+    ],
+    [
+      [
+        [0, 1, 0, 0],
+        [1, 1, 1, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      [
+        [0, 1, 0, 0],
+        [0, 1, 1, 0],
+        [0, 1, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      [
+        [0, 0, 0, 0],
+        [1, 1, 1, 0],
+        [0, 1, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      [
+        [0, 1, 0, 0],
+        [1, 1, 0, 0],
+        [0, 1, 0, 0],
+        [0, 0, 0, 0]
+      ]
+    ],
+    [
+      [
+        [1, 1, 0, 0],
+        [0, 1, 1, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      [
+        [0, 0, 1, 0],
+        [0, 1, 1, 0],
+        [0, 1, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      [
+        [1, 1, 0, 0],
+        [0, 1, 1, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      [
+        [0, 0, 1, 0],
+        [0, 1, 1, 0],
+        [0, 1, 0, 0],
+        [0, 0, 0, 0]
+      ]
+    ]
+  ];
+
+  let board = [];
+  let currentPiece = null;
+  let nextPiece = null;
+  let score = 0;
+  let totalLines = 0;
+  let level = 1;
+  let gameOver = false;
+  let paused = false;
+  let fallInterval = BASE_FALL_INTERVAL;
+  let elapsedMs = 0;
+  let fallAccumulator = 0;
+  let softDropHold = false;
+  let moveLeftHold = false;
+  let moveRightHold = false;
+  let horizontalRepeatMs = 0;
+  let softDropRepeatMs = 0;
+  let scoreSent = false;
+
+  function onActivate() {
+    resetGame();
+    onStatus('O-Block ist bereit.');
+  }
+
+  function resetGame() {
+    board = Array.from({ length: ROWS }, () => Array.from({ length: COLS }, () => EMPTY));
+    score = 0;
+    totalLines = 0;
+    level = 1;
+    gameOver = false;
+    paused = false;
+    fallInterval = BASE_FALL_INTERVAL;
+    elapsedMs = 0;
+    fallAccumulator = 0;
+    softDropHold = false;
+    moveLeftHold = false;
+    moveRightHold = false;
+    horizontalRepeatMs = 0;
+    softDropRepeatMs = 0;
+    scoreSent = false;
+    currentPiece = randomPiece();
+    nextPiece = randomPiece();
+  }
+
+  function randomPiece() {
+    return {
+      type: Math.floor(Math.random() * SHAPES.length),
+      rotation: 0,
+      x: 3,
+      y: -1
+    };
+  }
+
+  function isValidPosition(newX, newY, rotation, type) {
+    for (let r = 0; r < 4; r += 1) {
+      for (let c = 0; c < 4; c += 1) {
+        if (SHAPES[type][rotation][r][c] === 0) continue;
+        const boardX = newX + c;
+        const boardY = newY + r;
+        if (boardX < 0 || boardX >= COLS || boardY >= ROWS) return false;
+        if (boardY >= 0 && board[boardY][boardX] !== EMPTY) return false;
+      }
+    }
+    return true;
+  }
+
+  function stepDown() {
+    if (!currentPiece) return;
+    if (isValidPosition(currentPiece.x, currentPiece.y + 1, currentPiece.rotation, currentPiece.type)) {
+      currentPiece.y += 1;
+    } else {
+      lockPiece();
+      clearLines();
+      spawnNextPiece();
+    }
+  }
+
+  function spawnNextPiece() {
+    currentPiece = nextPiece;
+    currentPiece.x = 3;
+    currentPiece.y = -1;
+    currentPiece.rotation = 0;
+    nextPiece = randomPiece();
+    if (!isValidPosition(currentPiece.x, currentPiece.y, currentPiece.rotation, currentPiece.type)) {
+      gameOver = true;
+      finishScoreSubmission();
+      onStatus(`O-Block vorbei. Endstand ${score}.`);
+    }
+  }
+
+  function lockPiece() {
+    for (let r = 0; r < 4; r += 1) {
+      for (let c = 0; c < 4; c += 1) {
+        if (SHAPES[currentPiece.type][currentPiece.rotation][r][c] === 1) {
+          const boardX = currentPiece.x + c;
+          const boardY = currentPiece.y + r;
+          if (boardY >= 0) {
+            board[boardY][boardX] = currentPiece.type;
+          }
+        }
+      }
+    }
+  }
+
+  function clearLines() {
+    let linesCleared = 0;
+    for (let r = ROWS - 1; r >= 0; r -= 1) {
+      let full = true;
+      for (let c = 0; c < COLS; c += 1) {
+        if (board[r][c] === EMPTY) {
+          full = false;
+          break;
+        }
+      }
+      if (full) {
+        linesCleared += 1;
+        for (let row = r; row > 0; row -= 1) {
+          for (let c = 0; c < COLS; c += 1) {
+            board[row][c] = board[row - 1][c];
+          }
+        }
+        for (let c = 0; c < COLS; c += 1) {
+          board[0][c] = EMPTY;
+        }
+        r += 1;
+      }
+    }
+    if (linesCleared > 0) {
+      totalLines += linesCleared;
+      score += calculateScore(linesCleared);
+      updateDifficulty();
+    }
+  }
+
+  function calculateScore(linesCleared) {
+    if (linesCleared === 1) return 100 * level;
+    if (linesCleared === 2) return 300 * level;
+    if (linesCleared === 3) return 500 * level;
+    if (linesCleared >= 4) return 800 * level;
+    return 0;
+  }
+
+  function attemptMove(dx, dy, rewardSoftDrop = false) {
+    if (!currentPiece || gameOver || paused) return false;
+    const nextX = currentPiece.x + dx;
+    const nextY = currentPiece.y + dy;
+    if (isValidPosition(nextX, nextY, currentPiece.rotation, currentPiece.type)) {
+      currentPiece.x = nextX;
+      currentPiece.y = nextY;
+      if (rewardSoftDrop && dy > 0) score += 1;
+      return true;
+    }
+    if (dy > 0 && !rewardSoftDrop) {
+      stepDown();
+    }
+    return false;
+  }
+
+  function attemptRotate() {
+    if (!currentPiece || gameOver || paused) return;
+    const nextRotation = (currentPiece.rotation + 1) % 4;
+    const kicks = [-1, 1, -2, 2];
+    if (isValidPosition(currentPiece.x, currentPiece.y, nextRotation, currentPiece.type)) {
+      currentPiece.rotation = nextRotation;
+      return;
+    }
+    for (const kick of kicks) {
+      if (isValidPosition(currentPiece.x + kick, currentPiece.y, nextRotation, currentPiece.type)) {
+        currentPiece.x += kick;
+        currentPiece.rotation = nextRotation;
+        return;
+      }
+    }
+  }
+
+  function hardDrop() {
+    if (!currentPiece || gameOver || paused) return;
+    let dropDistance = 0;
+    while (isValidPosition(currentPiece.x, currentPiece.y + 1, currentPiece.rotation, currentPiece.type)) {
+      currentPiece.y += 1;
+      dropDistance += 1;
+    }
+    score += dropDistance * 2;
+    lockPiece();
+    clearLines();
+    spawnNextPiece();
+    fallAccumulator = 0;
+  }
+
+  function updateDifficulty() {
+    if (gameOver) return;
+    const timeLevel = Math.floor(elapsedMs / TIME_LEVEL_MS);
+    const lineLevel = Math.floor(totalLines / 10);
+    level = 1 + Math.max(timeLevel, lineLevel);
+    fallInterval = Math.max(MIN_FALL_INTERVAL, BASE_FALL_INTERVAL - (level - 1) * SPEED_STEP);
+  }
+
+  function getElapsedGameMillis() {
+    return Math.max(0, Math.floor(elapsedMs));
+  }
+
+  function formatTime(elapsedMillis) {
+    const totalSeconds = Math.floor(elapsedMillis / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }
+
+  function tick() {
+    if (!gameOver && !paused) {
+      elapsedMs += FIXED_STEP;
+      fallAccumulator += FIXED_STEP;
+      updateDifficulty();
+      handleHeldControls();
+      if (fallAccumulator >= fallInterval) {
+        stepDown();
+        fallAccumulator = 0;
+      }
+    }
+  }
+
+  function handleHeldControls() {
+    horizontalRepeatMs += FIXED_STEP;
+    softDropRepeatMs += FIXED_STEP;
+
+    if (moveLeftHold && !moveRightHold && horizontalRepeatMs >= 110) {
+      attemptMove(-1, 0);
+      horizontalRepeatMs = 0;
+    } else if (moveRightHold && !moveLeftHold && horizontalRepeatMs >= 110) {
+      attemptMove(1, 0);
+      horizontalRepeatMs = 0;
+    }
+
+    if (softDropHold && softDropRepeatMs >= 48) {
+      if (attemptMove(0, 1, true)) {
+        fallAccumulator = 0;
+      }
+      softDropRepeatMs = 0;
+    }
+  }
+
+  function render() {
+    drawBackground();
+    drawFrame();
+    drawBoard();
+    drawGhost();
+    drawPiece(currentPiece);
+    drawSidePanel();
+    drawOverlay();
+  }
+
+  function drawBackground() {
+    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, '#0e1223');
+    gradient.addColorStop(1, '#1c2f4a');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.10)';
+    ctx.beginPath();
+    ctx.ellipse(canvas.width * 0.18, canvas.height * 0.2, 110, 110, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.beginPath();
+    ctx.ellipse(canvas.width * 0.82, canvas.height * 0.72, 130, 130, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawFrame() {
+    roundedRect(ctx, BOARD_X - 12, BOARD_Y - 12, COLS * CELL + 24, ROWS * CELL + 24, 18, 'rgba(10,16,30,0.74)');
+    roundedRect(ctx, BOARD_X, BOARD_Y, COLS * CELL, ROWS * CELL, 12, 'rgba(16,24,44,0.9)');
+  }
+
+  function drawBoard() {
+    for (let r = 0; r < ROWS; r += 1) {
+      for (let c = 0; c < COLS; c += 1) {
+        const x = BOARD_X + c * CELL;
+        const y = BOARD_Y + r * CELL;
+        roundedRect(ctx, x, y, CELL, CELL, 5, 'rgba(255,255,255,0.04)');
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.strokeRect(x + 0.5, y + 0.5, CELL - 1, CELL - 1);
+        if (board[r][c] !== EMPTY) {
+          drawBlock(x, y, palette[board[r][c]], false);
+        }
+      }
+    }
+  }
+
+  function drawGhost() {
+    if (!currentPiece || gameOver) return;
+    let ghostY = currentPiece.y;
+    while (isValidPosition(currentPiece.x, ghostY + 1, currentPiece.rotation, currentPiece.type)) {
+      ghostY += 1;
+    }
+    for (let r = 0; r < 4; r += 1) {
+      for (let c = 0; c < 4; c += 1) {
+        if (SHAPES[currentPiece.type][currentPiece.rotation][r][c] === 1) {
+          const px = BOARD_X + (currentPiece.x + c) * CELL;
+          const py = BOARD_Y + (ghostY + r) * CELL;
+          drawBlock(px, py, palette[currentPiece.type], true);
+        }
+      }
+    }
+  }
+
+  function drawPiece(piece) {
+    if (!piece) return;
+    for (let r = 0; r < 4; r += 1) {
+      for (let c = 0; c < 4; c += 1) {
+        if (SHAPES[piece.type][piece.rotation][r][c] === 1) {
+          const boardY = piece.y + r;
+          if (boardY >= 0) {
+            const px = BOARD_X + (piece.x + c) * CELL;
+            const py = BOARD_Y + boardY * CELL;
+            drawBlock(px, py, palette[piece.type], false);
+          }
+        }
+      }
+    }
+  }
+
+  function drawBlock(x, y, baseColor, ghost) {
+    const blockColor = ghost ? `rgba(${baseColor[0]}, ${baseColor[1]}, ${baseColor[2]}, 0.28)` : rgb(baseColor);
+    roundedRect(ctx, x + 2, y + 2, CELL - 4, CELL - 4, 6, blockColor);
+
+    if (ghost) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.44)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x + 5, y + 5, CELL - 10, CELL - 10);
+      ctx.lineWidth = 1;
+      return;
+    }
+
+    roundedRect(ctx, x + 5, y + 5, CELL - 12, 7, 4, 'rgba(255,255,255,0.28)');
+    roundedRect(ctx, x + 5, y + 5, 7, CELL - 12, 4, 'rgba(255,255,255,0.28)');
+    roundedRect(ctx, x + 9, y + CELL - 12, CELL - 18, 4, 3, 'rgba(0,0,0,0.16)');
+    ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+    ctx.beginPath();
+    ctx.moveTo(x + 8, y + 12);
+    ctx.lineTo(x + CELL - 8, y + CELL - 8);
+    ctx.moveTo(x + CELL - 12, y + 8);
+    ctx.lineTo(x + 8, y + CELL - 12);
+    ctx.stroke();
+  }
+
+  function drawSidePanel() {
+    const panelX = BOARD_X + COLS * CELL + 28;
+    const panelY = BOARD_Y;
+    roundedRect(ctx, panelX, panelY, PANEL_W - 20, 250, 18, 'rgba(11,19,36,0.74)');
+    ctx.fillStyle = '#f5f5f5';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = 'bold 28px Arial';
+    ctx.fillText(GAME_NAME, panelX + 18, panelY + 38);
+
+    ctx.fillStyle = '#b4d2ff';
+    ctx.font = '14px Arial';
+    ctx.fillText('Score', panelX + 18, panelY + 72);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 26px Arial';
+    ctx.fillText(String(score), panelX + 18, panelY + 102);
+
+    ctx.fillStyle = '#b4d2ff';
+    ctx.font = '14px Arial';
+    ctx.fillText('Lines', panelX + 18, panelY + 132);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 22px Arial';
+    ctx.fillText(String(totalLines), panelX + 18, panelY + 158);
+
+    ctx.fillStyle = '#b4d2ff';
+    ctx.font = '14px Arial';
+    ctx.fillText('Level', panelX + 18, panelY + 186);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 22px Arial';
+    ctx.fillText(String(level), panelX + 18, panelY + 212);
+
+    ctx.fillStyle = '#b4d2ff';
+    ctx.font = '14px Arial';
+    ctx.fillText('Time', panelX + 92, panelY + 186);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 22px Arial';
+    ctx.fillText(formatTime(getElapsedGameMillis()), panelX + 92, panelY + 212);
+
+    roundedRect(ctx, panelX, panelY + 272, PANEL_W - 20, 148, 18, 'rgba(11,19,36,0.70)');
+    ctx.fillStyle = '#b4d2ff';
+    ctx.font = '16px Arial';
+    ctx.fillText('Next', panelX + 18, panelY + 302);
+    drawNextPiece(panelX + 26, panelY + 324);
+
+    roundedRect(ctx, panelX, panelY + 438, PANEL_W - 20, 150, 18, 'rgba(11,19,36,0.70)');
+    ctx.fillStyle = '#b4d2ff';
+    ctx.font = '15px Arial';
+    ctx.fillText('Steuerung', panelX + 18, panelY + 468);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '13px Arial';
+    ctx.fillText('Links/Rechts  bewegen', panelX + 18, panelY + 495);
+    ctx.fillText('Oben          drehen', panelX + 18, panelY + 517);
+    ctx.fillText('Unten         schneller', panelX + 18, panelY + 539);
+    ctx.fillText('Leertaste     Drop', panelX + 18, panelY + 561);
+    ctx.fillText('P             Pause', panelX + 18, panelY + 583);
+
+    if (activeHighScore > 0) {
+      ctx.fillStyle = '#ffd86a';
+      ctx.font = 'bold 14px Arial';
+      ctx.fillText(`Rekord: ${activeHighScore}`, panelX + 18, panelY + 235);
+    }
+  }
+
+  function drawNextPiece(startX, startY) {
+    if (!nextPiece) return;
+    const previewCell = 22;
+    for (let r = 0; r < 4; r += 1) {
+      for (let c = 0; c < 4; c += 1) {
+        if (SHAPES[nextPiece.type][0][r][c] === 1) {
+          const x = startX + c * previewCell;
+          const y = startY + r * previewCell;
+          roundedRect(ctx, x, y, previewCell - 2, previewCell - 2, 5, 'rgba(255,255,255,0.04)');
+          drawPreviewBlock(x, y, previewCell, palette[nextPiece.type]);
+        }
+      }
+    }
+  }
+
+  function drawPreviewBlock(x, y, previewCell, baseColor) {
+    roundedRect(ctx, x + 1, y + 1, previewCell - 3, previewCell - 3, 5, rgb(baseColor));
+    roundedRect(ctx, x + 3, y + 3, previewCell - 8, 5, 3, 'rgba(255,255,255,0.28)');
+    roundedRect(ctx, x + 3, y + 3, 5, previewCell - 8, 3, 'rgba(255,255,255,0.28)');
+  }
+
+  function drawOverlay() {
+    if (!paused && !gameOver) return;
+    roundedRect(ctx, BOARD_X, BOARD_Y, COLS * CELL, ROWS * CELL, 12, 'rgba(4,8,16,0.72)');
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = 'bold 32px Arial';
+    ctx.fillText(gameOver ? 'Game Over' : 'Pause', BOARD_X + COLS * CELL / 2, BOARD_Y + ROWS * CELL / 2 - 28);
+    ctx.font = '16px Arial';
+    ctx.fillText(gameOver ? 'Druecke R oder Enter fuer Neustart' : 'Druecke P zum Fortsetzen', BOARD_X + COLS * CELL / 2, BOARD_Y + ROWS * CELL / 2 + 12);
+  }
+
+  function handleKeyDown(event) {
+    const key = event.key.toLowerCase();
+    if (key === 'r') {
+      event.preventDefault();
+      resetGame();
+      onStatus('O-Block neu gestartet.');
+      return;
+    }
+    if (key === 'p') {
+      event.preventDefault();
+      if (!gameOver) {
+        paused = !paused;
+        onStatus(paused ? 'O-Block pausiert.' : 'O-Block fortgesetzt.');
+      }
+      return;
+    }
+    if (gameOver || paused) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        resetGame();
+      }
+      return;
+    }
+    if (event.key === 'ArrowLeft' || key === 'a') {
+      event.preventDefault();
+      moveLeftHold = true;
+      moveRightHold = false;
+      horizontalRepeatMs = 0;
+      attemptMove(-1, 0);
+    } else if (event.key === 'ArrowRight' || key === 'd') {
+      event.preventDefault();
+      moveRightHold = true;
+      moveLeftHold = false;
+      horizontalRepeatMs = 0;
+      attemptMove(1, 0);
+    } else if (event.key === 'ArrowDown' || key === 's') {
+      event.preventDefault();
+      softDropHold = true;
+      softDropRepeatMs = 0;
+      if (attemptMove(0, 1, true)) {
+        fallAccumulator = 0;
+      }
+    } else if (event.key === 'ArrowUp' || key === 'w') {
+      event.preventDefault();
+      attemptRotate();
+    } else if (event.key === ' ') {
+      event.preventDefault();
+      hardDrop();
+    }
+  }
+
+  function handleKeyUp(event) {
+    const key = event.key.toLowerCase();
+    if (event.key === 'ArrowLeft' || key === 'a') moveLeftHold = false;
+    if (event.key === 'ArrowRight' || key === 'd') moveRightHold = false;
+    if (event.key === 'ArrowDown' || key === 's') softDropHold = false;
+  }
+
+  function handlePointerDown(point) {
+    pointer.x = point.x;
+    pointer.y = point.y;
+    if (gameOver) {
+      resetGame();
+      return;
+    }
+    if (paused) {
+      paused = false;
+      return;
+    }
+    if (point.y < BOARD_Y || point.y > BOARD_Y + ROWS * CELL || point.x < BOARD_X || point.x > BOARD_X + COLS * CELL) {
+      return;
+    }
+    const localX = point.x - BOARD_X;
+    const localY = point.y - BOARD_Y;
+    if (localY > ROWS * CELL * 0.72) {
+      hardDrop();
+    } else if (localX < COLS * CELL * 0.33) {
+      attemptMove(-1, 0);
+    } else if (localX > COLS * CELL * 0.66) {
+      attemptMove(1, 0);
+    } else {
+      attemptRotate();
+    }
+  }
+
+  function handlePointerMove(point) {
+    pointer.x = point.x;
+    pointer.y = point.y;
+  }
+
+  function handlePointerLeave() {
+    pointer.x = -9999;
+    pointer.y = -9999;
+  }
+
+  function handleTouchAction(action, pressed) {
+    if (!pressed) {
+      if (action === 'left') moveLeftHold = false;
+      if (action === 'right') moveRightHold = false;
+      return;
+    }
+
+    if (gameOver) {
+      resetGame();
+      return;
+    }
+
+    if (paused) {
+      paused = false;
+      return;
+    }
+
+    if (action === 'left') {
+      moveLeftHold = true;
+      moveRightHold = false;
+      horizontalRepeatMs = 0;
+      attemptMove(-1, 0);
+    } else if (action === 'right') {
+      moveRightHold = true;
+      moveLeftHold = false;
+      horizontalRepeatMs = 0;
+      attemptMove(1, 0);
+    } else if (action === 'fire') {
+      attemptRotate();
+    }
+  }
+
+  function finishScoreSubmission() {
+    if (scoreSent) return;
+    scoreSent = true;
+    void onScore(score);
+  }
+
+  return {
+    onActivate,
+    handleKeyDown,
+    handleKeyUp,
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerLeave,
+    handleTouchAction,
+    tick,
+    render
+  };
+
+  function rgb(color) {
+    return `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
   }
 }
 
