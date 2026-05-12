@@ -28,6 +28,7 @@ const playerAvatarCard = document.getElementById('playerAvatarCard');
 const playerAvatarPreview = document.getElementById('playerAvatarPreview');
 const playerAvatarName = document.getElementById('playerAvatarName');
 const playerAvatarHint = document.getElementById('playerAvatarHint');
+const gameDownloadButton = document.getElementById('gameDownloadButton');
 const scoreboardTitleEl = document.getElementById('scoreboardTitle');
 const myBestScoreEl = document.getElementById('myBestScore');
 const globalBestScoreEl = document.getElementById('globalBestScore');
@@ -169,6 +170,9 @@ const GAME_CONFIGS = {
     displayWidth: 920,
     canvasLabel: 'O-Block Spielbereich',
     showAvatarCard: false,
+    downloadHref: './downloads/Oblock-Installer.exe',
+    downloadName: 'Oblock-Installer.exe',
+    downloadLabel: 'O-Block Installer herunterladen',
     touchActions: ['left', 'fire', 'right'],
     touchLabels: { left: 'Links', fire: 'Dreh', right: 'Rechts' },
     rules: [
@@ -331,6 +335,14 @@ function applyGameUi(config) {
         ? config.avatarHint(playerIdentity)
         : (config.avatarHint || `Im Spiel huepft direkt ${playerIdentity.assetLabel} als Avatar herum.`);
     }
+  }
+
+  if (gameDownloadButton) {
+    const hasDownload = Boolean(config.downloadHref);
+    gameDownloadButton.hidden = !hasDownload;
+    gameDownloadButton.href = hasDownload ? config.downloadHref : '#';
+    gameDownloadButton.download = hasDownload ? (config.downloadName || '') : '';
+    gameDownloadButton.textContent = hasDownload ? (config.downloadLabel || 'Download') : 'Download';
   }
 }
 
