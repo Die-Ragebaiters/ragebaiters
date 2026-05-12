@@ -76,10 +76,13 @@ const GAME_CONFIGS = {
     scoreboardTitle: 'Doodle Jason Highscores',
     canvasWidth: 400,
     canvasHeight: 700,
+    displayWidth: 560,
     canvasLabel: 'Doodle Jason Spielbereich',
     showAvatarCard: true,
     touchActions: ['left', 'right'],
     touchLabels: { left: 'Links', right: 'Rechts' },
+    avatarTitle: identity => `${identity.label} ist der springende Kopf`,
+    avatarHint: identity => `Im Spiel huepft direkt ${identity.assetLabel} als Avatar herum.`,
     rules: [
       { title: 'Bewegen', copy: 'Mit den Pfeiltasten oder den Touch-Buttons links und rechts steuern.' },
       { title: 'Starten', copy: 'Im Menue auf SPIELEN klicken oder `Enter` bzw. `Leertaste` druecken.' },
@@ -96,6 +99,7 @@ const GAME_CONFIGS = {
     scoreboardTitle: 'Space Invaders Klone Highscores',
     canvasWidth: 800,
     canvasHeight: 600,
+    displayWidth: 1080,
     canvasLabel: 'Space Invaders Klone Spielbereich',
     showAvatarCard: false,
     touchActions: ['left', 'fire', 'right'],
@@ -116,15 +120,41 @@ const GAME_CONFIGS = {
     scoreboardTitle: 'SuperJason Highscores',
     canvasWidth: 1280,
     canvasHeight: 720,
+    displayWidth: 1320,
     canvasLabel: 'SuperJason Spielbereich',
     showAvatarCard: true,
     touchActions: ['left', 'fire', 'right'],
     touchLabels: { left: 'Links', fire: 'Sprung', right: 'Rechts' },
+    avatarTitle: identity => `${identity.label} ist SuperJason`,
+    avatarHint: identity => `Das Gesicht ${identity.assetLabel} steckt hier im Jump-and-Run-Helden.`,
     rules: [
       { title: 'Laufen', copy: 'Mit A/D, den Pfeiltasten oder den Touch-Buttons links und rechts ueber die Karte rennen.' },
       { title: 'Springen', copy: 'Mit W, Pfeil hoch, `Leertaste` oder dem Sprung-Button Huerden, Gegner und Schluchten ueberwinden.' },
       { title: 'Sammeln', copy: 'Coins, Herzen, Stern und Super-Power bringen Extrapunkte, Schutz oder mehr Leben.' },
       { title: 'Fortschritt', copy: 'Nach jedem Level `Enter` oder `N` druecken. Im Endschloss wartet der Boss auf dich.' }
+    ]
+  },
+  monkeykong: {
+    key: 'monkeykong',
+    title: 'MonkeyKong',
+    intro: 'Eine Donkey-Kong-inspirierte 5-Level-Kampagne mit Leitern, Faessern, Bosskampf und einem eigenen globalen Highscore.',
+    metaKicker: 'Steuerung',
+    metaTitle: 'Faesser und Leitern',
+    scoreboardTitle: 'MonkeyKong Highscores',
+    canvasWidth: 960,
+    canvasHeight: 640,
+    displayWidth: 1180,
+    canvasLabel: 'MonkeyKong Spielbereich',
+    showAvatarCard: true,
+    touchActions: ['left', 'fire', 'right'],
+    touchLabels: { left: 'Links', fire: 'Sprung', right: 'Rechts' },
+    avatarTitle: identity => `${identity.label} klettert durch MonkeyKong`,
+    avatarHint: identity => `Dein Gesicht ${identity.assetLabel} ist auch hier die Spielfigur auf den Plattformen.`,
+    rules: [
+      { title: 'Laufen', copy: 'Mit A/D, den Pfeiltasten oder Touch links und rechts ueber die Plattformen rennen.' },
+      { title: 'Springen und Klettern', copy: 'Mit W, Pfeil hoch oder `Leertaste` springen. An Leitern bringt dieselbe Aktion dich nach oben.' },
+      { title: 'Ausweichen', copy: 'Ueber Faesser springen, sonst verlierst du Leben. Das Bosslevel wird mit jeder Welle hektischer.' },
+      { title: 'Ziel', copy: 'Erreiche in den ersten vier Levels das Ziel. Im Finale musst du den Boss von oben treffen.' }
     ]
   }
 };
@@ -211,7 +241,7 @@ async function selectGame(gameKey) {
   });
 
   applyGameUi(config);
-  configureCanvas(config.canvasWidth, config.canvasHeight, config.canvasLabel);
+  configureCanvas(config.canvasWidth, config.canvasHeight, config.canvasLabel, config.displayWidth);
   configureTouchButtons(config.touchActions, config.touchLabels);
 
   if (normalized === 'space_invaders') {
@@ -221,6 +251,13 @@ async function selectGame(gameKey) {
     });
   } else if (normalized === 'superjason') {
     activeGame = createSuperJasonGame({
+      onStatus: setStatus,
+      onScore: points => submitArcadeScore(normalized, points),
+      sprite: playerImg,
+      label: playerIdentity.label
+    });
+  } else if (normalized === 'monkeykong') {
+    activeGame = createMonkeyKongGame({
       onStatus: setStatus,
       onScore: points => submitArcadeScore(normalized, points),
       sprite: playerImg,
@@ -259,10 +296,14 @@ function applyGameUi(config) {
       playerAvatarPreview.alt = `${playerIdentity.label} Spielfigur`;
     }
     if (playerAvatarName) {
-      playerAvatarName.textContent = `${playerIdentity.label} ist der springende Kopf`;
+      playerAvatarName.textContent = typeof config.avatarTitle === 'function'
+        ? config.avatarTitle(playerIdentity)
+        : (config.avatarTitle || `${playerIdentity.label} ist der springende Kopf`);
     }
     if (playerAvatarHint) {
-      playerAvatarHint.textContent = `Im Spiel huepft direkt ${playerIdentity.assetLabel} als Avatar herum.`;
+      playerAvatarHint.textContent = typeof config.avatarHint === 'function'
+        ? config.avatarHint(playerIdentity)
+        : (config.avatarHint || `Im Spiel huepft direkt ${playerIdentity.assetLabel} als Avatar herum.`);
     }
   }
 }
@@ -281,10 +322,10 @@ function renderRules(rules) {
     .join('');
 }
 
-function configureCanvas(width, height, label) {
+function configureCanvas(width, height, label, displayWidth = width) {
   canvas.width = width;
   canvas.height = height;
-  canvas.style.setProperty('--game-canvas-max-width', `${width}px`);
+  canvas.style.setProperty('--game-canvas-max-width', `${displayWidth}px`);
   if (label) canvas.setAttribute('aria-label', label);
 }
 
@@ -2909,6 +2950,1099 @@ function createSuperJasonGame({ onStatus, onScore, sprite, label }) {
 
   function rectsOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
     return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+  }
+}
+
+function createMonkeyKongGame({ onStatus, onScore, sprite, label }) {
+  const WIDTH = 960;
+  const HEIGHT = 640;
+  const STATE_MENU = 0;
+  const STATE_PLAYING = 1;
+  const STATE_LEVEL_CLEAR = 2;
+  const STATE_GAME_OVER = 3;
+  const STATE_CAMPAIGN_CLEAR = 4;
+  const pointer = { x: -9999, y: -9999 };
+
+  let platforms = [];
+  let ladders = [];
+  let barrels = [];
+  let sparks = [];
+  let floatingTexts = [];
+  let levels = [];
+  let player = null;
+  let boss = null;
+  let goal = null;
+  let leftPressed = false;
+  let rightPressed = false;
+  let upPressed = false;
+  let downPressed = false;
+  let gameState = STATE_MENU;
+  let score = 0;
+  let highScore = 0;
+  let currentLevelIndex = 0;
+  let lives = 3;
+  let lastSpawnFrame = 0;
+  let barrelInterval = 90;
+  let barrelFloor = 52;
+  let levelClearFrame = -1;
+  let soundEnabled = true;
+  let frame = 0;
+  let scoreSent = false;
+
+  function onActivate() {
+    levels = buildLevels();
+    score = 0;
+    highScore = Math.max(activeHighScore || 0, 0);
+    currentLevelIndex = 0;
+    lives = 3;
+    leftPressed = false;
+    rightPressed = false;
+    upPressed = false;
+    downPressed = false;
+    gameState = STATE_MENU;
+    scoreSent = false;
+    frame = 0;
+    loadLevel(currentLevelIndex, true);
+    onStatus('MonkeyKong ist bereit.');
+  }
+
+  function buildLevels() {
+    return [
+      makeLevel(
+        [
+          [60, 560, 840, 26, 1],
+          [110, 458, 700, 22, -1],
+          [155, 356, 700, 22, 1],
+          [110, 254, 700, 22, -1],
+          [160, 152, 700, 22, 1],
+          [90, 70, 250, 18, 0]
+        ],
+        [
+          [220, 480, 80],
+          [730, 378, 80],
+          [260, 276, 80],
+          [710, 174, 80],
+          [250, 88, 64]
+        ],
+        100, 520, 190, 18, 250, 22,
+        92, 60, 3.0, 0.10, 'Docks', [96, 178, 214], [20, 24, 44]
+      ),
+      makeLevel(
+        [
+          [50, 560, 860, 26, -1],
+          [135, 468, 670, 22, 1],
+          [85, 376, 690, 22, -1],
+          [190, 284, 620, 22, 1],
+          [120, 192, 670, 22, -1],
+          [220, 98, 220, 18, 0]
+        ],
+        [
+          [710, 482, 78],
+          [210, 390, 78],
+          [670, 298, 78],
+          [255, 206, 78],
+          [330, 116, 76]
+        ],
+        820, 520, 250, 22, 360, 48,
+        80, 50, 3.7, 0.16, 'Factory', [245, 161, 75], [58, 26, 28]
+      ),
+      makeLevel(
+        [
+          [45, 564, 870, 24, 1],
+          [180, 482, 620, 22, -1],
+          [90, 400, 640, 22, 1],
+          [245, 318, 560, 22, -1],
+          [135, 236, 620, 22, 1],
+          [290, 154, 490, 22, -1],
+          [160, 82, 250, 18, 0]
+        ],
+        [
+          [250, 492, 72],
+          [660, 410, 72],
+          [300, 328, 72],
+          [620, 246, 72],
+          [365, 164, 72],
+          [250, 100, 60]
+        ],
+        90, 522, 130, 26, 235, 34,
+        68, 42, 4.3, 0.24, 'Summit', [145, 224, 188], [24, 30, 62]
+      ),
+      makeLevel(
+        [
+          [36, 568, 888, 24, -1],
+          [130, 500, 690, 20, 1],
+          [60, 432, 700, 20, -1],
+          [215, 364, 590, 20, 1],
+          [120, 296, 640, 20, -1],
+          [270, 228, 520, 20, 1],
+          [170, 160, 590, 20, -1],
+          [310, 92, 260, 18, 0]
+        ],
+        [
+          [715, 510, 66],
+          [220, 442, 66],
+          [660, 374, 66],
+          [265, 306, 66],
+          [615, 238, 66],
+          [305, 170, 66],
+          [400, 108, 62]
+        ],
+        830, 526, 310, 14, 435, 42,
+        56, 34, 5.0, 0.34, 'Panic', [243, 116, 90], [35, 14, 18]
+      ),
+      makeLevel(
+        [
+          [44, 568, 872, 24, 0],
+          [100, 486, 290, 20, 1],
+          [560, 486, 300, 20, -1],
+          [210, 394, 250, 20, -1],
+          [510, 394, 250, 20, 1],
+          [300, 302, 360, 20, 0],
+          [220, 210, 520, 20, 0],
+          [300, 118, 360, 18, 0]
+        ],
+        [
+          [312, 488, 84],
+          [612, 488, 84],
+          [350, 396, 84],
+          [572, 396, 84],
+          [452, 304, 84],
+          [452, 212, 84],
+          [452, 120, 74]
+        ],
+        96, 526, 390, 52, -500, -500,
+        52, 30, 5.4, 0.44, 'Throne', [112, 58, 36], [16, 10, 14],
+        true, 6, 320, 520
+      )
+    ];
+  }
+
+  function makeLevel(platformData, ladderData, playerStartX, playerStartY, bossX, bossY, goalX, goalY, startInterval, minInterval, barrelSpeed, extraSpawnChance, name, skyTop, skyBottom, bossFight = false, bossHealth = 0, bossArenaMinX = bossX, bossArenaMaxX = bossX) {
+    return {
+      platformData,
+      ladderData,
+      playerStartX,
+      playerStartY,
+      bossX,
+      bossY,
+      goalX,
+      goalY,
+      startInterval,
+      minInterval,
+      barrelSpeed,
+      extraSpawnChance,
+      name,
+      skyTop,
+      skyBottom,
+      bossFight,
+      bossHealth,
+      bossArenaMinX,
+      bossArenaMaxX
+    };
+  }
+
+  function startCampaign() {
+    score = 0;
+    highScore = Math.max(highScore, activeHighScore || 0);
+    lives = 3;
+    currentLevelIndex = 0;
+    scoreSent = false;
+    loadLevel(currentLevelIndex, true);
+    gameState = STATE_PLAYING;
+    onStatus(`${label} startet MonkeyKong.`);
+  }
+
+  function loadLevel(levelIndex, resetPlayerState) {
+    const level = levels[levelIndex];
+    platforms = level.platformData.map(data => createPlatform(...data));
+    ladders = level.ladderData.map(data => createLadder(...data));
+    barrels = [];
+    sparks = [];
+    floatingTexts = [];
+    player = createPlayer(level.playerStartX, level.playerStartY);
+    boss = createMonkeyBoss(level.bossX, level.bossY, level);
+    goal = createGoal(level.goalX, level.goalY);
+
+    if (resetPlayerState) {
+      player.vx = 0;
+      player.vy = 0;
+    }
+
+    barrelInterval = level.startInterval;
+    barrelFloor = level.minInterval;
+    lastSpawnFrame = frame;
+    levelClearFrame = -1;
+  }
+
+  function createPlatform(x, y, w, h, slope) {
+    return { x, y, w, h, slope };
+  }
+
+  function platformTopYAt(platform, px) {
+    const t = clamp((px - platform.x) / platform.w, 0, 1);
+    return platform.y + mapRange(t, 0, 1, 12 * platform.slope, -12 * platform.slope);
+  }
+
+  function createLadder(x, y, h) {
+    return { x, y, h, w: 36 };
+  }
+
+  function createGoal(x, y) {
+    return { x, y, w: 82, h: 48 };
+  }
+
+  function createMonkeyBoss(x, y, level) {
+    return {
+      x,
+      y,
+      baseY: y,
+      arenaMinX: level.bossArenaMinX,
+      arenaMaxX: level.bossArenaMaxX,
+      moveSpeed: 1.5,
+      dir: 1,
+      hurtFrames: 0,
+      health: level.bossFight ? Math.max(1, level.bossHealth) : 1,
+      maxHealth: level.bossFight ? Math.max(1, level.bossHealth) : 1,
+      bossFight: level.bossFight
+    };
+  }
+
+  function bossDefeated() {
+    return boss.bossFight && boss.health <= 0;
+  }
+
+  function updateBoss() {
+    if (!boss.bossFight || bossDefeated()) return;
+    if (boss.hurtFrames > 0) boss.hurtFrames -= 1;
+    boss.x += boss.dir * boss.moveSpeed;
+    if (boss.x < boss.arenaMinX) {
+      boss.x = boss.arenaMinX;
+      boss.dir = 1;
+    } else if (boss.x > boss.arenaMaxX) {
+      boss.x = boss.arenaMaxX;
+      boss.dir = -1;
+    }
+    boss.y = boss.baseY + Math.sin(frame * 0.08) * 4;
+  }
+
+  function bossCollidesWithPlayer() {
+    if (bossDefeated()) return false;
+    const bx = boss.x + 24;
+    const by = boss.y + 12;
+    const bw = 92;
+    const bh = 64;
+    return player.x < bx + bw && player.x + player.w > bx && player.y < by + bh && player.y + player.h > by;
+  }
+
+  function bossCanBeStompedByPlayer() {
+    if (!boss.bossFight || boss.hurtFrames > 0 || bossDefeated()) return false;
+    const bx = boss.x + 28;
+    const bw = 84;
+    const top = boss.y + 16;
+    const feet = player.y + player.h;
+    return player.vy > 0
+      && player.x + player.w > bx
+      && player.x < bx + bw
+      && feet >= top - 10
+      && feet <= top + 22
+      && player.y < top - 2;
+  }
+
+  function bossTakeHit() {
+    if (!boss.bossFight || boss.hurtFrames > 0) return;
+    boss.health -= 1;
+    boss.hurtFrames = 40;
+    boss.dir *= -1;
+    boss.moveSpeed = Math.min(boss.moveSpeed + 0.12, 2.5);
+  }
+
+  function createPlayer(x, y) {
+    return {
+      x,
+      y,
+      w: 30,
+      h: 42,
+      vx: 0,
+      vy: 0,
+      grounded: false,
+      climbing: false,
+      ladderExitFrames: 0
+    };
+  }
+
+  function updatePlayer() {
+    let move = 0;
+    if (leftPressed) move -= 1;
+    if (rightPressed) move += 1;
+    player.vx = move * 3.2;
+
+    let ladder = touchingLadder(player.x, player.y, player.w, player.h);
+    if (!ladder && (upPressed || downPressed)) {
+      ladder = ladderForClimbInput(player.x, player.y, player.w, player.h);
+    }
+
+    let exitPlatform = platformAtFeet(player.x, player.y, player.w, player.h, 24, 22);
+    player.climbing = Boolean(ladder && (upPressed || downPressed));
+
+    if (player.climbing) {
+      player.ladderExitFrames = 8;
+      player.vy = 0;
+      if (upPressed) player.y -= 2.6;
+      if (downPressed) player.y += 2.6;
+      player.x = lerpValue(player.x, ladder.x + ladder.w * 0.5 - player.w * 0.5, 0.28);
+
+      exitPlatform = platformAtFeet(player.x, player.y, player.w, player.h, 24, 22);
+      const nearLadderTop = player.y <= ladder.y + 6;
+      if (upPressed && nearLadderTop && exitPlatform) {
+        player.y = platformTopYAt(exitPlatform, player.x + player.w * 0.5) - player.h;
+        player.vy = 0;
+        player.grounded = true;
+        player.climbing = false;
+      }
+    } else {
+      if (player.ladderExitFrames > 0) {
+        const supportPlatform = platformAtFeet(player.x, player.y, player.w, player.h, 28, 26);
+        if (supportPlatform) {
+          const top = platformTopYAt(supportPlatform, player.x + player.w * 0.5);
+          player.y = top - player.h;
+          player.vy = 0;
+          player.grounded = true;
+        } else {
+          player.vy += 0.42;
+        }
+        player.ladderExitFrames -= 1;
+      } else {
+        player.vy += 0.42;
+      }
+
+      if (player.vy > 8) player.vy = 8;
+    }
+
+    player.x += player.vx;
+    player.x = clamp(player.x, 20, WIDTH - player.w - 20);
+    player.y += player.vy;
+
+    player.grounded = false;
+    if (!player.climbing) {
+      const landingPlatform = platformAtFeet(player.x, player.y, player.w, player.h, 24, 22);
+      if (landingPlatform && player.vy >= 0) {
+        const top = platformTopYAt(landingPlatform, player.x + player.w * 0.5);
+        player.y = top - player.h;
+        player.vy = 0;
+        player.grounded = true;
+      }
+    }
+  }
+
+  function playerTryJump() {
+    if (player.grounded && !player.climbing) {
+      player.vy = -8.8;
+      player.grounded = false;
+    }
+  }
+
+  function playerBounceAfterStomp() {
+    player.vy = -7.2;
+    player.grounded = false;
+  }
+
+  function snapPlayerToLadder(ladder) {
+    player.x = ladder.x + ladder.w * 0.5 - player.w * 0.5;
+    if (Math.abs(player.vy) < 1.5) {
+      player.vy = 0;
+    }
+  }
+
+  function playerHitsBarrel(barrel) {
+    return player.x < barrel.x + barrel.size
+      && player.x + player.w > barrel.x
+      && player.y < barrel.y + barrel.size
+      && player.y + player.h > barrel.y;
+  }
+
+  function playerReachedGoal() {
+    return player.x + player.w > goal.x + 10
+      && player.x < goal.x + goal.w - 10
+      && player.y < goal.y + goal.h
+      && player.y + player.h > goal.y;
+  }
+
+  function createBarrel(x, y, speed) {
+    const barrel = {
+      x,
+      y,
+      size: 24,
+      vx: speed,
+      targetSpeed: speed,
+      spin: 0,
+      jumpAwarded: false
+    };
+    const platform = platformUnder(barrel.x, barrel.y + 12);
+    if (platform && platform.slope < 0) {
+      barrel.vx = -barrel.vx;
+    }
+    return barrel;
+  }
+
+  function updateBarrel(barrel) {
+    const platform = platformUnder(barrel.x + barrel.size * 0.5, barrel.y + barrel.size + 8);
+    if (platform) {
+      const centerX = barrel.x + barrel.size * 0.5;
+      const top = platformTopYAt(platform, centerX);
+      barrel.y = top - barrel.size;
+      const dir = platform.slope === 0 ? 1 : -platform.slope;
+      barrel.vx = lerpValue(barrel.vx, dir * barrel.targetSpeed, 0.08);
+    } else {
+      barrel.y += 6.2;
+    }
+
+    barrel.x += barrel.vx;
+    barrel.spin += barrel.vx * 0.15;
+  }
+
+  function barrelOffscreen(barrel) {
+    return barrel.y > HEIGHT + 60 || barrel.x < -80 || barrel.x > WIDTH + 80;
+  }
+
+  function spawnBarrel() {
+    const level = levels[currentLevelIndex];
+    barrels.push(createBarrel(boss.x + 90, boss.y + 38, level.barrelSpeed));
+  }
+
+  function explode(x, y, color) {
+    for (let i = 0; i < 24; i += 1) {
+      const angle = rand(0, Math.PI * 2);
+      const speed = rand(1.5, 5.0);
+      sparks.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: rand(20, 40),
+        color
+      });
+    }
+  }
+
+  function addScore(amount, x, y, text) {
+    score = Math.max(0, score + amount);
+    highScore = Math.max(highScore, score, activeHighScore || 0);
+    floatingTexts.push({ x, y, life: 50, label: text });
+  }
+
+  function platformUnder(px, py) {
+    let best = null;
+    let bestY = Number.POSITIVE_INFINITY;
+    platforms.forEach(platform => {
+      if (px >= platform.x - 8 && px <= platform.x + platform.w + 8) {
+        const top = platformTopYAt(platform, px);
+        if (top >= py - 10 && top < bestY) {
+          bestY = top;
+          best = platform;
+        }
+      }
+    });
+    return best;
+  }
+
+  function platformAtFeet(px, py, pw, ph, aboveTolerance, belowTolerance) {
+    const footX = px + pw * 0.5;
+    for (const platform of platforms) {
+      if (footX >= platform.x && footX <= platform.x + platform.w) {
+        const top = platformTopYAt(platform, footX);
+        const feet = py + ph;
+        if (feet >= top - aboveTolerance && feet <= top + belowTolerance) {
+          return platform;
+        }
+      }
+    }
+    return null;
+  }
+
+  function ladderForClimbInput(px, py, pw, ph) {
+    for (const ladder of ladders) {
+      const centerX = px + pw * 0.5;
+      const feetY = py + ph;
+      const ladderCenterX = ladder.x + ladder.w * 0.5;
+      const closeInX = Math.abs(centerX - ladderCenterX) <= 18;
+      const closeInY = feetY >= ladder.y - 18 && py <= ladder.y + ladder.h + 10;
+      if (closeInX && closeInY) {
+        return ladder;
+      }
+    }
+    return null;
+  }
+
+  function touchingLadder(px, py, pw, ph) {
+    for (const ladder of ladders) {
+      const centerX = px + pw * 0.5;
+      const ladderCenterX = ladder.x + ladder.w * 0.5;
+      const closeInX = Math.abs(centerX - ladderCenterX) <= 9;
+      const closeInY = py + ph > ladder.y + 4 && py < ladder.y + ladder.h - 4;
+      if (closeInX && closeInY) {
+        return ladder;
+      }
+    }
+    return null;
+  }
+
+  function updateSparks() {
+    for (let i = sparks.length - 1; i >= 0; i -= 1) {
+      const spark = sparks[i];
+      spark.x += spark.vx;
+      spark.y += spark.vy;
+      spark.vy += 0.08;
+      spark.life -= 1;
+      if (spark.life <= 0) {
+        sparks.splice(i, 1);
+      }
+    }
+  }
+
+  function updateFloatingTexts() {
+    for (let i = floatingTexts.length - 1; i >= 0; i -= 1) {
+      const text = floatingTexts[i];
+      text.y -= 0.7;
+      text.life -= 1;
+      if (text.life <= 0) {
+        floatingTexts.splice(i, 1);
+      }
+    }
+  }
+
+  function updateGame() {
+    const level = levels[currentLevelIndex];
+
+    updateBoss();
+
+    if (frame - lastSpawnFrame >= barrelInterval) {
+      spawnBarrel();
+      lastSpawnFrame = frame;
+      if (barrelInterval > barrelFloor) barrelInterval -= 1;
+    }
+
+    updatePlayer();
+
+    if (level.bossFight && bossCanBeStompedByPlayer()) {
+      bossTakeHit();
+      playerBounceAfterStomp();
+      addScore(300, boss.x + 70, boss.y - 10, '+300');
+      if (bossDefeated()) {
+        explode(boss.x + 70, boss.y + 40, [255, 120, 90]);
+        addScore(2500, boss.x + 70, boss.y - 34, '+2500');
+        gameState = STATE_LEVEL_CLEAR;
+        levelClearFrame = frame;
+        onStatus('Boss besiegt. Die Kampagne ist fast durch.');
+        return;
+      }
+    } else if (level.bossFight && bossCollidesWithPlayer()) {
+      playerHit();
+      return;
+    }
+
+    for (let i = barrels.length - 1; i >= 0; i -= 1) {
+      const barrel = barrels[i];
+      updateBarrel(barrel);
+
+      if (barrelOffscreen(barrel)) {
+        barrels.splice(i, 1);
+        addScore(5, barrel.x, Math.min(barrel.y, HEIGHT - 40), '+5');
+        continue;
+      }
+
+      if (!barrel.jumpAwarded
+        && player.vy > 0
+        && player.y + player.h < barrel.y + 8
+        && Math.abs((player.x + player.w * 0.5) - (barrel.x + barrel.size * 0.5)) < 22) {
+        barrel.jumpAwarded = true;
+        addScore(25, barrel.x, barrel.y - 12, '+25');
+      }
+
+      if (playerHitsBarrel(barrel)) {
+        playerHit();
+        return;
+      }
+    }
+
+    updateSparks();
+    updateFloatingTexts();
+
+    if (!level.bossFight && playerReachedGoal()) {
+      explode(goal.x + goal.w * 0.5, goal.y + goal.h * 0.5, [120, 255, 190]);
+      const reward = 1000 + currentLevelIndex * 250;
+      addScore(reward, goal.x + goal.w * 0.5, goal.y - 8, `+${reward}`);
+      gameState = STATE_LEVEL_CLEAR;
+      levelClearFrame = frame;
+      onStatus(`Level ${currentLevelIndex + 1} geschafft.`);
+      return;
+    }
+
+    if (!level.bossFight && Math.random() < level.extraSpawnChance / 60) {
+      spawnBarrel();
+    } else if (level.bossFight && Math.random() < level.extraSpawnChance / 75) {
+      spawnBarrel();
+    }
+  }
+
+  function playerHit() {
+    explode(player.x + player.w * 0.5, player.y + player.h * 0.5, [255, 210, 90]);
+    lives -= 1;
+
+    if (lives <= 0) {
+      gameState = STATE_GAME_OVER;
+      finishScoreSubmission();
+      onStatus(`Game Over mit ${score} Punkten.`);
+    } else {
+      addScore(-50, player.x, player.y - 10, '-50');
+      loadLevel(currentLevelIndex, true);
+      gameState = STATE_PLAYING;
+      onStatus(`Autsch. Noch ${lives} Leben uebrig.`);
+    }
+  }
+
+  function advanceLevel() {
+    currentLevelIndex += 1;
+    if (currentLevelIndex >= levels.length) {
+      gameState = STATE_CAMPAIGN_CLEAR;
+      highScore = Math.max(highScore, score);
+      finishScoreSubmission();
+      onStatus(`MonkeyKong abgeschlossen. Endstand ${score}.`);
+      return;
+    }
+
+    loadLevel(currentLevelIndex, true);
+    gameState = STATE_PLAYING;
+    onStatus(`Level ${currentLevelIndex + 1} startet: ${levels[currentLevelIndex].name}.`);
+  }
+
+  function finishScoreSubmission() {
+    if (scoreSent) return;
+    scoreSent = true;
+    void onScore(score);
+  }
+
+  function tick() {
+    frame += 1;
+
+    if (gameState === STATE_PLAYING) {
+      updateGame();
+    } else if (gameState === STATE_LEVEL_CLEAR && levelClearFrame > 0 && frame - levelClearFrame > 90) {
+      advanceLevel();
+    } else {
+      updateSparks();
+      updateFloatingTexts();
+    }
+  }
+
+  function render() {
+    drawBackdrop();
+
+    if (gameState === STATE_MENU) {
+      drawTitleScreen();
+      return;
+    }
+
+    drawWorld();
+    drawHud();
+
+    if (gameState === STATE_LEVEL_CLEAR) {
+      drawOverlay('LEVEL GESCHAFFT', "Weiter geht's gleich...");
+    } else if (gameState === STATE_GAME_OVER) {
+      drawOverlay('GAME OVER', 'Druecke R oder Enter fuer einen Neustart', true);
+    } else if (gameState === STATE_CAMPAIGN_CLEAR) {
+      drawOverlay('MONKEYKONG SIEGT', 'Alle Level geschafft. Druecke R oder Enter', true);
+    }
+  }
+
+  function drawWorld() {
+    platforms.forEach(drawPlatform);
+    ladders.forEach(drawLadder);
+    if (!levels[currentLevelIndex].bossFight) drawGoal();
+    drawBoss();
+    barrels.forEach(drawBarrel);
+    drawPlayer();
+    sparks.forEach(drawSpark);
+    floatingTexts.forEach(drawFloatingText);
+  }
+
+  function drawBackdrop() {
+    const level = levels[currentLevelIndex];
+    const gradient = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+    gradient.addColorStop(0, rgb(level.skyTop));
+    gradient.addColorStop(1, rgb(level.skyBottom));
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.beginPath();
+    ctx.ellipse(780, 90, 65, 65, 0, 0, Math.PI * 2);
+    ctx.ellipse(820, 90, 40, 40, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    drawCloud(ctx, 140, 120, 77);
+    drawCloud(ctx, 340, 80, 56);
+    drawCloud(ctx, 620, 150, 91);
+
+    ctx.fillStyle = '#263a34';
+    ctx.fillRect(0, 586, WIDTH, 54);
+    for (let i = 0; i < WIDTH; i += 18) {
+      ctx.fillStyle = `rgb(${48 + (i % 36)}, 80, 64)`;
+      ctx.fillRect(i, 592, 10, 48);
+    }
+  }
+
+  function drawTitleScreen() {
+    drawWorldPreview();
+
+    ctx.fillStyle = 'rgba(12, 18, 24, 0.72)';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffe362';
+    ctx.font = 'bold 44px Arial';
+    ctx.fillText('MONKEYKONG', WIDTH * 0.5, 150);
+
+    ctx.fillStyle = '#ececec';
+    ctx.font = '18px Arial';
+    ctx.fillText('Startmenue', WIDTH * 0.5, 198);
+    ctx.fillText('5 Level, mehr Tempo, mehr Faesser und ein Bossfight-Finale', WIDTH * 0.5, 230);
+    ctx.fillText('Laufen: A/D oder Pfeile   Springen: W, Pfeil hoch oder Leertaste', WIDTH * 0.5, 270);
+    ctx.fillText('Leitern: hoch an der Leiter, Touch-Button startet dort den Aufstieg', WIDTH * 0.5, 298);
+    ctx.fillText(`ENTER startet die Kampagne   M schaltet Sound ${soundEnabled ? 'AUS' : 'AN'}`, WIDTH * 0.5, 340);
+    ctx.fillText('Level 1: Docks   Level 2: Factory   Level 3: Summit   Level 4: Panic   Level 5: Throne', WIDTH * 0.5, 380);
+    ctx.fillText('Im letzten Level triffst du den Boss von oben, statt nur das Ziel zu erreichen', WIDTH * 0.5, 408);
+    ctx.fillText(`Highscore: ${highScore}`, WIDTH * 0.5, 452);
+    drawButton(ctx, pointer, WIDTH * 0.5, 530, 260, 56, 'STARTEN', '#2EAE2E', '#4ADE4A');
+  }
+
+  function drawWorldPreview() {
+    platforms.forEach(drawPlatform);
+    ladders.forEach(drawLadder);
+    if (!levels[currentLevelIndex].bossFight) drawGoal();
+    drawBoss();
+    drawPlayer();
+    const previewBarrel = createBarrel(boss.x + 75, boss.y + 38, levels[currentLevelIndex].barrelSpeed);
+    previewBarrel.vx = levels[currentLevelIndex].barrelSpeed;
+    drawBarrel(previewBarrel);
+  }
+
+  function drawHud() {
+    roundedRect(ctx, 12, 10, 420, 82, 10, 'rgba(10,14,18,0.72)');
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.font = '18px Arial';
+    ctx.fillText(`Punkte: ${score}`, 26, 28);
+    ctx.fillText(`Highscore: ${highScore}`, 26, 50);
+    ctx.fillText(`Leben: ${lives}`, 220, 28);
+    ctx.fillText(`Level ${currentLevelIndex + 1} / ${levels.length} - ${levels[currentLevelIndex].name}`, 220, 50);
+    ctx.fillText(`Sound: ${soundEnabled ? 'AN' : 'AUS'}`, 26, 72);
+    if (levels[currentLevelIndex].bossFight) {
+      ctx.fillText(`Boss HP: ${boss.health} / ${boss.maxHealth}`, 220, 72);
+    }
+  }
+
+  function drawOverlay(title, subtitle, showButton = false) {
+    ctx.fillStyle = 'rgba(8,10,14,0.78)';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffeb72';
+    ctx.font = 'bold 44px Arial';
+    ctx.fillText(title, WIDTH * 0.5, 250);
+    ctx.fillStyle = '#f4f4f4';
+    ctx.font = '18px Arial';
+    ctx.fillText(subtitle, WIDTH * 0.5, 302);
+    if (showButton) {
+      drawButton(ctx, pointer, WIDTH * 0.5, 380, 280, 54, 'NOCHMAL', '#2EAE2E', '#4ADE4A');
+    }
+  }
+
+  function drawPlatform(platform) {
+    ctx.strokeStyle = '#4c2816';
+    ctx.fillStyle = '#aa5826';
+    ctx.beginPath();
+    ctx.moveTo(platform.x, platformTopYAt(platform, platform.x));
+    ctx.lineTo(platform.x + platform.w, platformTopYAt(platform, platform.x + platform.w));
+    ctx.lineTo(platform.x + platform.w, platform.y + platform.h);
+    ctx.lineTo(platform.x, platform.y + platform.h);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.lineWidth = 1;
+    for (let i = 0; i < platform.w; i += 28) {
+      const bx = platform.x + i;
+      const by = platformTopYAt(platform, bx + 14);
+      roundedRect(ctx, bx, by + 2, 22, platform.h - 4, 4, '#be6c38');
+      roundedRect(ctx, bx + 2, by + 5, 18, 4, 2, 'rgba(122,57,28,0.72)');
+      roundedRect(ctx, bx + 2, by + 12, 18, 3, 2, 'rgba(222,145,86,0.72)');
+    }
+  }
+
+  function drawLadder(ladder) {
+    ctx.strokeStyle = '#eed078';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(ladder.x + 8, ladder.y);
+    ctx.lineTo(ladder.x + 8, ladder.y + ladder.h);
+    ctx.moveTo(ladder.x + ladder.w - 8, ladder.y);
+    ctx.lineTo(ladder.x + ladder.w - 8, ladder.y + ladder.h);
+    for (let yy = ladder.y + 8; yy < ladder.y + ladder.h; yy += 14) {
+      ctx.moveTo(ladder.x + 8, yy);
+      ctx.lineTo(ladder.x + ladder.w - 8, yy);
+    }
+    ctx.stroke();
+    ctx.lineWidth = 1;
+  }
+
+  function drawGoal() {
+    roundedRect(ctx, goal.x, goal.y, goal.w, goal.h, 6, '#daa44a');
+    roundedRect(ctx, goal.x + 8, goal.y + 8, goal.w - 16, goal.h - 16, 4, '#9a6220');
+    ctx.fillStyle = '#ffe65a';
+    for (let i = 0; i < 4; i += 1) {
+      ctx.beginPath();
+      ctx.ellipse(goal.x + 16 + i * 16, goal.y + 20 + Math.sin(frame * 0.08 + i) * 3, 8, 4.5, 0, 0, Math.PI * 2);
+      ctx.ellipse(goal.x + 22 + i * 15, goal.y + 28 + Math.cos(frame * 0.07 + i) * 2, 6.5, 3.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function drawBoss() {
+    if (bossDefeated()) return;
+    ctx.fillStyle = boss.hurtFrames > 0 ? '#be5440' : '#7a4e2a';
+    roundedRect(ctx, boss.x + 30, boss.y + 20, 78, 56, 20, boss.hurtFrames > 0 ? '#be5440' : '#7a4e2a');
+    ctx.beginPath();
+    ctx.ellipse(boss.x + 44, boss.y + 30, 15, 14, 0, 0, Math.PI * 2);
+    ctx.ellipse(boss.x + 94, boss.y + 30, 15, 14, 0, 0, Math.PI * 2);
+    ctx.ellipse(boss.x + 69, boss.y + 44, 41, 35, 0, 0, Math.PI * 2);
+    ctx.fill();
+    roundedRect(ctx, boss.x + 45, boss.y + 34, 48, 36, 18, '#e8c694');
+    ctx.fillStyle = '#141414';
+    ctx.beginPath();
+    ctx.ellipse(boss.x + 58, boss.y + 46, 2.5, 2.5, 0, 0, Math.PI * 2);
+    ctx.ellipse(boss.x + 80, boss.y + 46, 2.5, 2.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#141414';
+    ctx.beginPath();
+    ctx.moveTo(boss.x + 62, boss.y + 59);
+    ctx.lineTo(boss.x + 76, boss.y + 59);
+    ctx.stroke();
+    ctx.fillStyle = '#c32c2c';
+    ctx.beginPath();
+    ctx.moveTo(boss.x + 116, boss.y + 34);
+    ctx.lineTo(boss.x + 145, boss.y + 46);
+    ctx.lineTo(boss.x + 120, boss.y + 59);
+    ctx.closePath();
+    ctx.fill();
+    roundedRect(ctx, boss.x + 108, boss.y + 60, 48, 12, 6, '#ffe04e');
+
+    if (boss.bossFight) {
+      roundedRect(ctx, 640, 18, 250, 22, 8, 'rgba(12,18,24,0.7)');
+      const hpWidth = mapRange(boss.health, 0, boss.maxHealth, 0, 238);
+      roundedRect(ctx, 646, 24, hpWidth, 10, 4, '#ff5e46');
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.font = '18px Arial';
+      ctx.fillText('Boss', 646, 14);
+    }
+  }
+
+  function drawPlayer() {
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    roundedRect(ctx, 6, 9, 18, 14, 4, '#e62e3e');
+    roundedRect(ctx, 4, 18, 22, 18, 4, '#2260d4');
+    roundedRect(ctx, 5, 35, 7, 7, 2, '#623616');
+    roundedRect(ctx, 18, 35, 7, 7, 2, '#623616');
+    roundedRect(ctx, 3, 2, 24, 7, 3, '#ffc44e');
+
+    if (sprite.complete && sprite.naturalWidth > 0) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(15, 10, 9, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(sprite, 6, 1, 18, 18);
+      ctx.restore();
+      ctx.strokeStyle = 'rgba(255,255,255,0.72)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(15, 10, 9, 0, Math.PI * 2);
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.fillStyle = '#ffd6b0';
+      ctx.ellipse(15, 10, 9, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    roundedRect(ctx, 8, 20, 4, 5, 2, '#ffffff');
+    roundedRect(ctx, 18, 20, 4, 5, 2, '#ffffff');
+    ctx.restore();
+  }
+
+  function drawBarrel(barrel) {
+    ctx.save();
+    ctx.translate(barrel.x + barrel.size * 0.5, barrel.y + barrel.size * 0.5);
+    ctx.rotate(barrel.spin);
+    ctx.fillStyle = '#a2562a';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, barrel.size * 0.5, barrel.size * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#72321a';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, (barrel.size - 6) * 0.5, (barrel.size - 6) * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#e0b65c';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-8, -2);
+    ctx.lineTo(8, 2);
+    ctx.moveTo(-2, -8);
+    ctx.lineTo(2, 8);
+    ctx.stroke();
+    ctx.lineWidth = 1;
+    ctx.restore();
+  }
+
+  function drawSpark(spark) {
+    const alpha = clamp(mapRange(spark.life, 0, 40, 0, 1), 0, 1);
+    ctx.fillStyle = rgba(spark.color, alpha);
+    ctx.beginPath();
+    ctx.ellipse(spark.x, spark.y, 2, 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawFloatingText(text) {
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '18px Arial';
+    ctx.fillStyle = `rgba(255, 240, 120, ${clamp(mapRange(text.life, 0, 50, 0, 1), 0, 1)})`;
+    ctx.fillText(text.label, text.x, text.y);
+  }
+
+  function handleKeyDown(event) {
+    const key = event.key.toLowerCase();
+    if (event.key === 'ArrowLeft' || key === 'a') {
+      event.preventDefault();
+      leftPressed = true;
+    }
+    if (event.key === 'ArrowRight' || key === 'd') {
+      event.preventDefault();
+      rightPressed = true;
+    }
+    if (event.key === 'ArrowUp' || key === 'w') {
+      event.preventDefault();
+      upPressed = true;
+      if (gameState === STATE_PLAYING) {
+        const climbLadder = ladderForClimbInput(player.x, player.y, player.w, player.h);
+        if (climbLadder) snapPlayerToLadder(climbLadder);
+        else playerTryJump();
+      }
+    }
+    if (event.key === 'ArrowDown' || key === 's') {
+      event.preventDefault();
+      downPressed = true;
+      if (gameState === STATE_PLAYING) {
+        const climbLadder = ladderForClimbInput(player.x, player.y, player.w, player.h);
+        if (climbLadder) snapPlayerToLadder(climbLadder);
+      }
+    }
+    if (event.key === ' ') {
+      event.preventDefault();
+      if (gameState === STATE_PLAYING) {
+        playerTryJump();
+      }
+    }
+    if (key === 'm') {
+      soundEnabled = !soundEnabled;
+      onStatus(`MonkeyKong Sound ${soundEnabled ? 'AN' : 'AUS'}.`);
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      if (gameState === STATE_MENU) {
+        startCampaign();
+      } else if (gameState !== STATE_PLAYING) {
+        startCampaign();
+      }
+    }
+    if (key === 'r' && gameState !== STATE_PLAYING) {
+      startCampaign();
+    }
+  }
+
+  function handleKeyUp(event) {
+    const key = event.key.toLowerCase();
+    if (event.key === 'ArrowLeft' || key === 'a') leftPressed = false;
+    if (event.key === 'ArrowRight' || key === 'd') rightPressed = false;
+    if (event.key === 'ArrowUp' || key === 'w') upPressed = false;
+    if (event.key === 'ArrowDown' || key === 's') downPressed = false;
+  }
+
+  function handlePointerDown(point) {
+    pointer.x = point.x;
+    pointer.y = point.y;
+    if (gameState === STATE_MENU && hitButton(point.x, point.y, WIDTH * 0.5, 530, 260, 56)) {
+      startCampaign();
+    } else if (gameState !== STATE_PLAYING && hitButton(point.x, point.y, WIDTH * 0.5, 380, 280, 54)) {
+      startCampaign();
+    }
+  }
+
+  function handlePointerMove(point) {
+    pointer.x = point.x;
+    pointer.y = point.y;
+  }
+
+  function handlePointerLeave() {
+    pointer.x = -9999;
+    pointer.y = -9999;
+  }
+
+  function handleTouchAction(action, pressed) {
+    if (action === 'left') leftPressed = pressed;
+    if (action === 'right') rightPressed = pressed;
+    if (action === 'fire') {
+      upPressed = pressed;
+      if (!pressed) return;
+
+      if (gameState === STATE_MENU || gameState === STATE_GAME_OVER || gameState === STATE_CAMPAIGN_CLEAR) {
+        startCampaign();
+        return;
+      }
+
+      if (gameState === STATE_PLAYING) {
+        const climbLadder = ladderForClimbInput(player.x, player.y, player.w, player.h);
+        if (climbLadder) snapPlayerToLadder(climbLadder);
+        else playerTryJump();
+      }
+    }
+  }
+
+  return {
+    onActivate,
+    handleKeyDown,
+    handleKeyUp,
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerLeave,
+    handleTouchAction,
+    tick,
+    render
+  };
+
+  function lerpValue(start, end, amount) {
+    return start + (end - start) * amount;
+  }
+
+  function rgb(color) {
+    return `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+  }
+
+  function rgba(color, alpha) {
+    return `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${alpha})`;
   }
 }
 

@@ -1166,6 +1166,7 @@ h2 { font-size: clamp(1.8rem, 8vw, 3rem); font-weight: 900; line-height: 1.2; }
   display: grid;
   justify-items: center;
   gap: 16px;
+  overflow: hidden;
 }
 
 .page-doodle-jason .game-canvas-wrap {
@@ -1176,7 +1177,7 @@ h2 { font-size: clamp(1.8rem, 8vw, 3rem); font-weight: 900; line-height: 1.2; }
 
 .page-doodle-jason .game-canvas {
   width: 100%;
-  max-width: var(--game-canvas-max-width, 400px);
+  max-width: min(100%, var(--game-canvas-max-width, 400px));
   height: auto;
   display: block;
   border-radius: 26px;
@@ -1187,7 +1188,7 @@ h2 { font-size: clamp(1.8rem, 8vw, 3rem); font-weight: 900; line-height: 1.2; }
 
 .page-doodle-jason .game-touch-controls {
   width: 100%;
-  max-width: var(--game-canvas-max-width, 400px);
+  max-width: min(100%, var(--game-canvas-max-width, 400px));
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
@@ -1460,7 +1461,11 @@ h2 { font-size: clamp(1.8rem, 8vw, 3rem); font-weight: 900; line-height: 1.2; }
 
 @media (min-width: 960px) {
   .page-doodle-jason .game-layout {
-    grid-template-columns: minmax(0, 430px) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1.65fr) minmax(320px, 0.9fr);
     align-items: start;
+  }
+
+  .page-doodle-jason .game-board-card {
+    padding: 28px;
   }
 }
