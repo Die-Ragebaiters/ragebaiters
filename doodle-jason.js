@@ -170,9 +170,9 @@ const GAME_CONFIGS = {
     displayWidth: 920,
     canvasLabel: 'O-Block Spielbereich',
     showAvatarCard: false,
-    downloadHref: './downloads/Oblock-Installer.exe',
-    downloadName: 'Oblock-Installer.exe',
-    downloadLabel: 'O-Block Installer herunterladen',
+    downloadHref: './downloads/Oblock-Installer.zip',
+    downloadName: 'Oblock-Installer.zip',
+    downloadLabel: 'O-Block Installer herunterladen (ZIP)',
     touchActions: ['left', 'fire', 'right'],
     touchLabels: { left: 'Links', fire: 'Dreh', right: 'Rechts' },
     rules: [
