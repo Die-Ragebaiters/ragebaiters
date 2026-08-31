@@ -89,6 +89,7 @@
     import { supabase, initPage } from './auth.js?v=2026-04-23-1';
     await initPage('team');
 
+    const topBannerImg = document.querySelector('.top-banner img');
     const leaderGrid = document.getElementById('teamLeaderGrid');
     const operatorGrid = document.getElementById('teamOperatorGrid');
     const leaderSection = document.getElementById('teamLeaderSection');
@@ -99,6 +100,29 @@
     const modalName = document.getElementById('modalName');
     const modalDesc = document.getElementById('modalDesc');
     const modalClose = document.querySelector('.modal-close');
+
+    try {
+      const [
+        { data: bannerVariant, error: bannerError },
+        { data: customBannerPath, error: customBannerError }
+      ] = await Promise.all([
+        supabase.rpc('get_homepage_banner'),
+        supabase.rpc('get_homepage_banner_custom_path')
+      ]);
+
+      if (bannerError) throw bannerError;
+      if (customBannerError) throw customBannerError;
+
+      if (bannerVariant === 'sponsor') {
+        topBannerImg.src = 'images/banner.png';
+        topBannerImg.alt = 'die Ragebaiters Sponsor Banner';
+      } else if (bannerVariant === 'custom' && customBannerPath) {
+        topBannerImg.src = resolveBannerUrl(customBannerPath);
+        topBannerImg.alt = 'die Ragebaiters eigenes Banner';
+      }
+    } catch (error) {
+      console.error('[Ragebaiters] Banner konnte nicht geladen werden:', error);
+    }
 
     const fallbackTeamMembers = [
       { id: 'ben', name: 'Yotzek (Ben)', role: 'Teamführer', description: 'Ben koordiniert die Truppe und bewahrt selbst im Gefecht einen kühlen Kopf.', image_url: 'images/benf.png', is_leader: true, sort_order: 10 },
@@ -190,6 +214,16 @@
       }
 
       return normalized;
+    }
+
+    function resolveBannerUrl(storagePath) {
+      const normalized = String(storagePath || '').trim();
+      if (!normalized) return 'images/banner2.png';
+      if (/^https?:\/\//i.test(normalized)) return normalized;
+      if (normalized.startsWith('__local__/')) return normalized.replace('__local__/', '');
+
+      const { data: publicData } = supabase.storage.from('photos').getPublicUrl(normalized);
+      return publicData.publicUrl;
     }
 
     function isTeamMemberStoragePath(path) {
