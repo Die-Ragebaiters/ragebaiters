@@ -87,8 +87,12 @@ body.nav-lock {
   margin: 8px auto 0;
   border-radius: 18px;
   overflow: hidden;
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow);
+  border: 3px solid var(--accent);
+  box-shadow:
+    var(--shadow),
+    0 0 0 1px rgba(183,255,60,0.36),
+    0 0 26px rgba(183,255,60,0.48),
+    0 0 60px rgba(127,214,28,0.28);
   background: #000;
   animation: fadeSlide 0.7s ease-out both;
 }
@@ -1611,9 +1615,13 @@ body {
 /* Top banner stronger neon outline */
 .top-banner {
   border: 3px solid var(--accent);
-  box-shadow: 0 40px 110px rgba(10,6,20,0.75), 0 0 48px rgba(122,252,255,0.06);
+  box-shadow:
+    0 40px 110px rgba(10,6,20,0.75),
+    0 0 0 1px rgba(183,255,60,0.36),
+    0 0 30px rgba(183,255,60,0.52),
+    0 0 72px rgba(127,214,28,0.32);
 }
-.top-banner::after { background: linear-gradient(90deg, rgba(122,252,255,0.12), rgba(199,125,255,0.06)); }
+.top-banner::after { background: linear-gradient(90deg, rgba(183,255,60,0.14), rgba(127,214,28,0.08)); }
 
 /* Hero logo glow: cyan + magenta */
 .hero-logo-large::before {
@@ -1852,4 +1860,3 @@ a, .footer-login-link, .instagram-post-secondary, .page-doodle-jason .game-downl
 .card:hover, .primary-btn:hover, .contact-btn:hover, .top-banner:hover {
   transform: translateY(-3px) !important;
 }
-
