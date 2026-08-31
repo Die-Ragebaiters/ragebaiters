@@ -22,6 +22,10 @@ drop function if exists public.hard_delete_user_account(uuid);
 drop function if exists public.admin_cleanup_expired_test_accounts(text);
 drop function if exists public.get_homepage_instagram_post();
 drop function if exists public.admin_set_homepage_instagram_post(text, text, text, text, timestamptz, text);
+-- Entfernt beide moeglichen alten Signaturen, damit PostgREST den RPC-Aufruf
+-- mit ausschliesslich p_variant eindeutig der unten definierten Funktion zuordnet.
+drop function if exists public.admin_set_homepage_banner(text);
+drop function if exists public.admin_set_homepage_banner(text, text);
 drop function if exists public.get_homepage_banner_custom_path();
 drop function if exists public.admin_set_homepage_banner_custom_path(text);
 drop function if exists public.get_team_members();
