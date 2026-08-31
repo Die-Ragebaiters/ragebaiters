@@ -87,8 +87,12 @@ body.nav-lock {
   margin: 8px auto 0;
   border-radius: 18px;
   overflow: hidden;
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow);
+  border: 3px solid var(--accent);
+  box-shadow:
+    var(--shadow),
+    0 0 0 1px rgba(183,255,60,0.36),
+    0 0 26px rgba(183,255,60,0.48),
+    0 0 60px rgba(127,214,28,0.28);
   background: #000;
   animation: fadeSlide 0.7s ease-out both;
 }
