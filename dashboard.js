@@ -27,6 +27,7 @@ const BANNER_OPTIONS = {
   team: { src: 'images/banner2.png', label: 'Team' }
 };
 
+const dashboardTopBannerImg = document.querySelector('.top-banner img');
 const loadingSection = document.getElementById('loading');
 const mainSection = document.getElementById('mainSection');
 const helloEl = document.getElementById('hello');
@@ -163,11 +164,11 @@ mainSection.hidden = false;
 if (state.canUpload) await loadMyPhotos();
 if (state.canViewUsers) await loadUsers();
 await loadTeamMembers();
+await loadBannerSetting();
 if (state.isAdmin) {
   await Promise.all([
     loadPendingReviews(),
     loadInvites(),
-    loadBannerSetting(),
     loadInstagramSettings()
   ]);
 }
@@ -833,6 +834,7 @@ async function loadBannerSetting() {
   const radio = bannerRadios.find(entry => entry.value === variant);
   if (radio) radio.checked = true;
   updateBannerPreview(variant);
+  updateDashboardTopBanner(variant);
 }
 
 async function saveBannerSetting() {
@@ -855,7 +857,23 @@ async function saveBannerSetting() {
   }
 
   updateBannerPreview(selected);
+  updateDashboardTopBanner(selected);
   setMessage(bannerMessage, `Startseiten-Banner gespeichert: ${bannerLabel(selected)}`, 'success');
+}
+
+function updateDashboardTopBanner(variant) {
+  if (!dashboardTopBannerImg) return;
+
+  const normalized = normalizeBannerVariant(variant, state.bannerCustomPath);
+  if (normalized === 'custom' && state.bannerCustomPath) {
+    dashboardTopBannerImg.src = resolvePhotoUrl(state.bannerCustomPath);
+    dashboardTopBannerImg.alt = 'die Ragebaiters eigenes Banner';
+    return;
+  }
+
+  const config = BANNER_OPTIONS[normalized] || BANNER_OPTIONS[DEFAULT_BANNER_VARIANT];
+  dashboardTopBannerImg.src = config.src;
+  dashboardTopBannerImg.alt = `die Ragebaiters ${config.label} Banner`;
 }
 
 function updateBannerPreview(variant) {
