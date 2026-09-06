@@ -1740,7 +1740,12 @@ async function loadUsers() {
       const { error: saveError } = await supabase.rpc('admin_update_user', {
         p_user_id: userId,
         p_username: username,
-        p_role: role
+        p_role: role,
+        p_show_on_team: null,
+        p_is_team_lead: null,
+        p_team_role: null,
+        p_team_image_url: null,
+        p_team_sort_order: null
       });
 
       if (saveError) {

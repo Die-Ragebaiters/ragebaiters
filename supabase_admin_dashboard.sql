@@ -3,6 +3,9 @@
 -- Enthält den Observer-Review-Workflow inkl. Admin-Troll-Aktion.
 
 drop function if exists public.admin_list_invites();
+-- Alte RPC-Ueberladung entfernen, sonst kann PostgREST bei admin_update_user
+-- nicht eindeutig zwischen der 3er- und der erweiterten Signatur waehlen.
+drop function if exists public.admin_update_user(uuid, text, text);
 drop function if exists public.admin_create_invite(text);
 drop function if exists public.admin_create_invite(text, text);
 drop function if exists public.admin_create_invite(text, text, text);
@@ -450,7 +453,12 @@ from public.list_gallery_photos(false);
 create or replace function public.admin_update_user(
   p_user_id uuid,
   p_username text,
-  p_role text
+  p_role text,
+  p_show_on_team boolean default null,
+  p_is_team_lead boolean default null,
+  p_team_role text default null,
+  p_team_image_url text default null,
+  p_team_sort_order integer default null
 )
 returns boolean
 language plpgsql
@@ -1271,7 +1279,7 @@ grant execute on function public.admin_list_users() to authenticated;
 grant execute on function public.dashboard_list_members() to authenticated;
 grant execute on function public.list_gallery_photos(boolean) to anon, authenticated;
 grant execute on function public.get_latest_gallery_photo(boolean) to anon, authenticated;
-grant execute on function public.admin_update_user(uuid, text, text) to authenticated;
+grant execute on function public.admin_update_user(uuid, text, text, boolean, boolean, text, text, integer) to authenticated;
 grant execute on function public.admin_approve_photo(bigint) to authenticated;
 grant execute on function public.admin_mark_photo_as_troll(bigint) to authenticated;
 grant execute on function public.admin_delete_photo(bigint) to authenticated;
@@ -1715,7 +1723,12 @@ from public.list_gallery_photos(false);
 create or replace function public.admin_update_user(
   p_user_id uuid,
   p_username text,
-  p_role text
+  p_role text,
+  p_show_on_team boolean default null,
+  p_is_team_lead boolean default null,
+  p_team_role text default null,
+  p_team_image_url text default null,
+  p_team_sort_order integer default null
 )
 returns boolean
 language plpgsql
@@ -1908,7 +1921,7 @@ grant execute on function public.admin_list_users() to authenticated;
 grant execute on function public.dashboard_list_members() to authenticated;
 grant execute on function public.list_gallery_photos(boolean) to anon, authenticated;
 grant execute on function public.get_latest_gallery_photo(boolean) to anon, authenticated;
-grant execute on function public.admin_update_user(uuid, text, text) to authenticated;
+grant execute on function public.admin_update_user(uuid, text, text, boolean, boolean, text, text, integer) to authenticated;
 grant execute on function public.admin_approve_photo(bigint) to authenticated;
 grant execute on function public.admin_mark_photo_as_troll(bigint) to authenticated;
 grant execute on function public.admin_delete_photo(bigint) to authenticated;
@@ -2327,7 +2340,12 @@ $$;
 create or replace function public.admin_update_user(
   p_user_id uuid,
   p_username text,
-  p_role text
+  p_role text,
+  p_show_on_team boolean default null,
+  p_is_team_lead boolean default null,
+  p_team_role text default null,
+  p_team_image_url text default null,
+  p_team_sort_order integer default null
 )
 returns boolean
 language plpgsql
