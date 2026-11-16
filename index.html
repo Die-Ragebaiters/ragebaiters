@@ -7,13 +7,17 @@
   <link rel="icon" type="image/png" href="images/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="./styles.css?v=2026-11-16-1">
+  <link rel="stylesheet" href="./styles.css?v=2026-11-16-2">
 </head>
 <body>
 
-  <div class="top-banner">
+  <div class="top-banner" id="homepageBanner" role="button" tabindex="0" aria-haspopup="dialog" aria-label="Banner in Vollbild anzeigen">
     <img src="images/banner2.png" alt="die Ragebaiters Banner" />
   </div>
+  <dialog class="banner-lightbox" id="bannerLightbox" aria-label="Banner in Vollbild">
+    <button class="banner-lightbox-close" id="bannerLightboxClose" type="button" aria-label="Vollbild schließen">×</button>
+    <img id="bannerLightboxImage" alt="Banner in Vollbild" />
+  </dialog>
 
   <header class="container">
     <nav class="nav">
@@ -156,6 +160,26 @@
   await initPage('home');
 
   const topBannerImg = document.querySelector('.top-banner img');
+  const homepageBanner = document.getElementById('homepageBanner');
+  const bannerLightbox = document.getElementById('bannerLightbox');
+  const bannerLightboxImage = document.getElementById('bannerLightboxImage');
+  const bannerLightboxClose = document.getElementById('bannerLightboxClose');
+  function openBannerLightbox() {
+    bannerLightboxImage.src = topBannerImg.currentSrc || topBannerImg.src;
+    bannerLightboxImage.alt = topBannerImg.alt || 'Banner in Vollbild';
+    bannerLightbox.showModal();
+  }
+  homepageBanner.addEventListener('click', openBannerLightbox);
+  homepageBanner.addEventListener('keydown', event => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openBannerLightbox();
+    }
+  });
+  bannerLightboxClose.addEventListener('click', () => bannerLightbox.close());
+  bannerLightbox.addEventListener('click', event => {
+    if (event.target === bannerLightbox) bannerLightbox.close();
+  });
   const latestMedia = document.getElementById('latest-media');
   const instagramLatest = document.getElementById('instagram-latest');
   const instagramProfileUrl = 'https://www.instagram.com/die_ragebaiters/';
