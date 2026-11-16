@@ -122,3 +122,11 @@ Nach dem Einspielen dieser Webseiten-Version einmal `supabase_banner_updates.sql
 im Supabase SQL Editor ausführen. Damit werden das gespeicherte Bannerformat und
 die Admin-Abfrage für das Bannerarchiv eingerichtet. Eigene Banner werden im
 Bucket `photos` aufbewahrt; neue Uploads werden automatisch aktiviert.
+
+## Cloudflare Workers Deployment
+
+Die Webseite ist statisch und wird direkt aus dem Repository-Hauptverzeichnis
+ausgeliefert. `wrangler.jsonc` konfiguriert dieses Verzeichnis als Static Assets;
+`.assetsignore` hält Dokumentation und SQL-Dateien aus dem öffentlichen Asset-Upload.
+In Cloudflare Workers Builds das Root-Verzeichnis des Repositories verwenden,
+den Build-Befehl leer lassen und als Deploy-Befehl `npx wrangler deploy` setzen.
