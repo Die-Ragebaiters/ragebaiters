@@ -441,8 +441,22 @@ security definer
 set search_path = public
 stable
 as $$
-  select *
-  from public.list_gallery_photos(p_include_internal)
+  select
+    p.id,
+    p.storage_path,
+    p.title,
+    p.caption,
+    coalesce(pr.username, 'anonym') as author,
+    p.uploaded_at
+  from public.photos p
+  left join public.profiles pr on pr.id = p.user_id
+  where p.visibility = 'public'
+     or (
+       p.visibility = 'troll_internal'
+       and p_include_internal
+       and public.current_user_role() in ('observer', 'admin')
+     )
+  order by p.uploaded_at desc nulls last, p.id desc
   limit 1;
 $$;
 
@@ -1771,8 +1785,22 @@ security definer
 set search_path = public
 stable
 as $$
-  select *
-  from public.list_gallery_photos(p_include_internal)
+  select
+    p.id,
+    p.storage_path,
+    p.title,
+    p.caption,
+    coalesce(pr.username, 'anonym') as author,
+    p.uploaded_at
+  from public.photos p
+  left join public.profiles pr on pr.id = p.user_id
+  where p.visibility = 'public'
+     or (
+       p.visibility = 'troll_internal'
+       and p_include_internal
+       and public.current_user_role() in ('observer', 'admin')
+     )
+  order by p.uploaded_at desc nulls last, p.id desc
   limit 1;
 $$;
 

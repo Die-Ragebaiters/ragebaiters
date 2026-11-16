@@ -1043,18 +1043,8 @@ async function uploadCustomBanner(file) {
     return;
   }
 
-  const aspect = getSelectedBannerAspect();
-  if (!aspect) {
-    setMessage(bannerMessage, 'Banner ist hochgeladen. Bitte ein gültiges Seitenverhältnis festlegen und speichern.', 'error');
-    return;
-  }
-  const { error: aspectError } = await supabase.rpc('admin_set_homepage_banner_aspect', { p_aspect: aspect });
-  if (aspectError) {
-    setMessage(bannerMessage, `Banner ist hochgeladen, Seitenverhältnis konnte nicht gespeichert werden: ${aspectError.message}`, 'error');
-    return;
-  }
-  state.bannerAspect = aspect;
-
+  // Activate immediately after saving the path. A missing format RPC must not
+  // leave the uploaded image stored while the old banner remains active.
   const { error: activateError } = await supabase.rpc('admin_set_homepage_banner', { p_variant: 'custom' });
   if (activateError) {
     setMessage(bannerMessage, `Banner ist hochgeladen, konnte aber nicht aktiviert werden: ${activateError.message}`, 'error');
@@ -1063,10 +1053,23 @@ async function uploadCustomBanner(file) {
 
   state.bannerCustomPath = key;
   syncCustomBannerChoicePreview();
-  await loadBannerLibrary();
-
   const customRadio = bannerRadios.find(radio => radio.value === 'custom');
   if (customRadio) customRadio.checked = true;
+  updateBannerPreview('custom');
+  updateDashboardTopBanner('custom');
+
+  const aspect = getSelectedBannerAspect();
+  if (!aspect) {
+    setMessage(bannerMessage, 'Banner wurde hochgeladen und aktiviert. Bitte ein gültiges Seitenverhältnis festlegen und speichern.', 'error');
+    return;
+  }
+  const { error: aspectError } = await supabase.rpc('admin_set_homepage_banner_aspect', { p_aspect: aspect });
+  if (aspectError) {
+    setMessage(bannerMessage, `Banner wurde hochgeladen und aktiviert. Seitenverhältnis konnte nicht gespeichert werden: ${aspectError.message}`, 'error');
+    return;
+  }
+  state.bannerAspect = aspect;
+  await loadBannerLibrary();
 
   updateBannerPreview('custom');
   updateDashboardTopBanner('custom');

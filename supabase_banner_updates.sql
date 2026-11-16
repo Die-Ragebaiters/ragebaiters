@@ -62,4 +62,16 @@ $$;
 
 grant execute on function public.get_homepage_banner_aspect() to anon, authenticated;
 grant execute on function public.admin_set_homepage_banner_aspect(text) to authenticated;
-grant execute on function public.admin_list_homepage_banners() to authenticated;
+
+-- Das Archiv ist optional und kann in bereits bestehenden Datenbanken fehlen.
+-- Ein fehlender Archiv-RPC darf die Format-Migration nicht zurueckrollen.
+do $$
+begin
+  if to_regprocedure('public.admin_list_homepage_banners()') is not null then
+    execute 'grant execute on function public.admin_list_homepage_banners() to authenticated';
+  end if;
+end;
+$$;
+
+-- Macht die neu angelegten RPC-Funktionen sofort fuer PostgREST/Supabase sichtbar.
+notify pgrst, 'reload schema';
