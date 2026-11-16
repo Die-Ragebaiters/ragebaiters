@@ -7,7 +7,7 @@
   <link rel="icon" type="image/png" href="images/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="./styles.css?v=2026-08-31-2">
+  <link rel="stylesheet" href="./styles.css?v=2026-11-16-1">
 </head>
 <body>
 
@@ -75,6 +75,7 @@
           <div class="card" style="text-align:center; color: var(--muted);">Team wird geladen...</div>
         </div>
       </div>
+
     </section>
   </main>
 
@@ -104,14 +105,20 @@
     try {
       const [
         { data: bannerVariant, error: bannerError },
-        { data: customBannerPath, error: customBannerError }
+        { data: customBannerPath, error: customBannerError },
+        { data: bannerAspect, error: bannerAspectError }
       ] = await Promise.all([
         supabase.rpc('get_homepage_banner'),
-        supabase.rpc('get_homepage_banner_custom_path')
+        supabase.rpc('get_homepage_banner_custom_path'),
+        supabase.rpc('get_homepage_banner_aspect').catch(() => ({ data: '16:9', error: null }))
       ]);
 
       if (bannerError) throw bannerError;
       if (customBannerError) throw customBannerError;
+      if (bannerAspectError) throw bannerAspectError;
+      const aspectMatch = String(bannerAspect || '16:9').match(/^(?:custom:)?([1-9]\d{0,3}):([1-9]\d{0,3})$/);
+      const aspect = aspectMatch ? `${aspectMatch[1]} / ${aspectMatch[2]}` : '16 / 9';
+      document.querySelector('.top-banner')?.style.setProperty('--banner-aspect-ratio', aspect);
 
       if (bannerVariant === 'sponsor') {
         topBannerImg.src = 'images/banner.png';

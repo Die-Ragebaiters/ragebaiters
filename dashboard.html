@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard | die Ragebaiters</title>
   <link rel="icon" type="image/png" href="images/logo.png">
-  <link rel="stylesheet" href="./styles.css?v=2026-08-31-2">
-  <link rel="stylesheet" href="./app.css?v=2026-05-05-1">
+  <link rel="stylesheet" href="./styles.css?v=2026-11-16-1">
+  <link rel="stylesheet" href="./app.css?v=2026-11-16-1">
 </head>
 <body class="page-dashboard">
 
@@ -279,6 +279,29 @@
                   <button type="button" class="btn-secondary" id="uploadCustomBannerBtn">Bild hochladen</button>
                 </div>
                 <div class="banner-upload-hint" id="customBannerUploadHint">Noch kein eigenes Banner hochgeladen.</div>
+                <label class="banner-library-field" for="bannerLibrarySelect">Vorhandenes Banner verwenden
+                  <select id="bannerLibrarySelect">
+                    <option value="">Bannerarchiv wird geladen...</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            <div class="card banner-aspect-settings">
+              <div class="banner-choice-copy">
+                <strong>Seitenverhältnis</strong>
+                <span>Das Bild bleibt unverzerrt. Bei abweichendem Format wird es mittig zugeschnitten.</span>
+              </div>
+              <label for="bannerAspectSelect">Format</label>
+              <select id="bannerAspectSelect">
+                <option value="9:16">9:16 – Hochformat</option>
+                <option value="16:9">16:9 – Querformat</option>
+                <option value="custom">Eigene Skalierung</option>
+              </select>
+              <div class="banner-custom-aspect" id="bannerCustomAspect" hidden>
+                <label>Breite <input type="number" id="bannerAspectWidth" min="1" max="9999" value="16"></label>
+                <span aria-hidden="true">:</span>
+                <label>Höhe <input type="number" id="bannerAspectHeight" min="1" max="9999" value="9"></label>
               </div>
             </div>
 
@@ -286,7 +309,7 @@
               <div class="panel-head compact">
                 <div>
                   <h3>Aktive Auswahl</h3>
-                  <p>Die Auswahl wird sofort für die Startseite gespeichert.</p>
+                  <p>Auswahl und Seitenverhältnis werden für die Startseite gespeichert.</p>
                 </div>
                 <button type="button" class="btn-primary" id="saveBannerBtn">Banner speichern</button>
               </div>
@@ -433,6 +456,6 @@
 
   <script src="./nav.js?v=2026-04-23-5" defer></script>
   <script src="./config.js?v=2026-04-23-5"></script>
-  <script type="module" src="./dashboard.js?v=2026-08-31-1"></script>
+  <script type="module" src="./dashboard.js?v=2026-11-16-1"></script>
 </body>
 </html>

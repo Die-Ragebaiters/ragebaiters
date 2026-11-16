@@ -115,3 +115,10 @@ Der kostenlose Supabase-Plan reicht locker für euch:
 - 5 GB Traffic / Monat
 
 Für ein Airsoft-Team-Portal ist das völlig ausreichend.
+
+## Bannerverwaltung aktualisieren
+
+Nach dem Einspielen dieser Webseiten-Version einmal `supabase_banner_updates.sql`
+im Supabase SQL Editor ausführen. Damit werden das gespeicherte Bannerformat und
+die Admin-Abfrage für das Bannerarchiv eingerichtet. Eigene Banner werden im
+Bucket `photos` aufbewahrt; neue Uploads werden automatisch aktiviert.

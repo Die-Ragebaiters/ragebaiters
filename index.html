@@ -7,13 +7,17 @@
   <link rel="icon" type="image/png" href="images/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="./styles.css?v=2026-08-31-2">
+  <link rel="stylesheet" href="./styles.css?v=2026-11-16-1">
 </head>
 <body>
 
-  <div class="top-banner">
+  <div class="top-banner" id="homepageBanner" role="button" tabindex="0" aria-haspopup="dialog" aria-label="Banner in Vollbild anzeigen">
     <img src="images/banner2.png" alt="die Ragebaiters Banner" />
   </div>
+  <dialog class="banner-lightbox" id="bannerLightbox" aria-label="Banner in Vollbild">
+    <button class="banner-lightbox-close" id="bannerLightboxClose" type="button" aria-label="Vollbild schließen">×</button>
+    <img id="bannerLightboxImage" alt="Banner in Vollbild" />
+  </dialog>
 
   <header class="container">
     <nav class="nav">
@@ -64,6 +68,19 @@
           <a href="team.html" style="padding: 16px 32px; margin-top:10px;">Die Einheit ansehen</a>
         </div>
       </div>
+    </section>
+
+    <section class="section partner-section" aria-label="Unser Partner BEGADI">
+      <a class="partner-card" href="https://www.begadi.com/" target="_blank" rel="noopener noreferrer" aria-label="BEGADI – Webseite in neuem Tab öffnen">
+        <img class="partner-mark" src="images/begadilogo.png" alt="BEGADI-Logo">
+        <div class="partner-copy">
+          <span class="eyebrow">Unser Partner</span>
+          <h2>BEGADI – Unser starker Partner für Airsoft, Outdoor und Technik</h2>
+          <p>Mit BEGADI haben wir einen erfahrenen und kompetenten Partner an unserer Seite. Als etablierter Fachhändler bietet BEGADI ein umfangreiches Sortiment rund um Airsoft, taktische Ausrüstung, Outdoor und technische Komponenten. Besonders die langjährige Erfahrung, die eigene Produktentwicklung und die Leidenschaft für das Hobby machen BEGADI zu einem starken Partner an unserer Seite.</p>
+          <strong class="partner-support">Wir werden von BEGADI unterstützt!</strong>
+          <span class="partner-visit">begadi.com <span aria-hidden="true">↗</span></span>
+        </div>
+      </a>
     </section>
 
     <section class="section">
@@ -143,17 +160,40 @@
   await initPage('home');
 
   const topBannerImg = document.querySelector('.top-banner img');
+  const homepageBanner = document.getElementById('homepageBanner');
+  const bannerLightbox = document.getElementById('bannerLightbox');
+  const bannerLightboxImage = document.getElementById('bannerLightboxImage');
+  const bannerLightboxClose = document.getElementById('bannerLightboxClose');
+  function openBannerLightbox() {
+    bannerLightboxImage.src = topBannerImg.currentSrc || topBannerImg.src;
+    bannerLightboxImage.alt = topBannerImg.alt || 'Banner in Vollbild';
+    bannerLightbox.showModal();
+  }
+  homepageBanner.addEventListener('click', openBannerLightbox);
+  homepageBanner.addEventListener('keydown', event => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openBannerLightbox();
+    }
+  });
+  bannerLightboxClose.addEventListener('click', () => bannerLightbox.close());
+  bannerLightbox.addEventListener('click', event => {
+    if (event.target === bannerLightbox) bannerLightbox.close();
+  });
   const latestMedia = document.getElementById('latest-media');
   const instagramLatest = document.getElementById('instagram-latest');
   const instagramProfileUrl = 'https://www.instagram.com/die_ragebaiters/';
 
   const [
     { data: bannerVariant },
-    { data: customBannerPath }
+    { data: customBannerPath },
+    { data: bannerAspect }
   ] = await Promise.all([
     supabase.rpc('get_homepage_banner'),
-    supabase.rpc('get_homepage_banner_custom_path')
+    supabase.rpc('get_homepage_banner_custom_path'),
+    supabase.rpc('get_homepage_banner_aspect').catch(() => ({ data: '16:9' }))
   ]);
+  applyBannerAspect(bannerAspect);
   if (bannerVariant === 'sponsor') {
     topBannerImg.src = 'images/banner.png';
     topBannerImg.alt = 'die Ragebaiters Sponsor Banner';
@@ -224,6 +264,13 @@
     }
     const { data: pub } = supabase.storage.from('photos').getPublicUrl(path);
     return pub.publicUrl;
+  }
+
+  function applyBannerAspect(value) {
+    const normalized = String(value || '16:9');
+    const match = normalized.match(/^(?:custom:)?([1-9]\d{0,3}):([1-9]\d{0,3})$/);
+    const [width, height] = match ? [match[1], match[2]] : ['16', '9'];
+    document.querySelector('.top-banner')?.style.setProperty('--banner-aspect-ratio', `${width} / ${height}`);
   }
 
   async function renderLatestInstagramPost() {
