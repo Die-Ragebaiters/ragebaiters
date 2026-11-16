@@ -3,6 +3,9 @@
 -- Enthält den Observer-Review-Workflow inkl. Admin-Troll-Aktion.
 
 drop function if exists public.admin_list_invites();
+-- Alte RPC-Ueberladung entfernen, sonst kann PostgREST bei admin_update_user
+-- nicht eindeutig zwischen der 3er- und der erweiterten Signatur waehlen.
+drop function if exists public.admin_update_user(uuid, text, text);
 drop function if exists public.admin_create_invite(text);
 drop function if exists public.admin_create_invite(text, text);
 drop function if exists public.admin_create_invite(text, text, text);
@@ -450,7 +453,12 @@ from public.list_gallery_photos(false);
 create or replace function public.admin_update_user(
   p_user_id uuid,
   p_username text,
-  p_role text
+  p_role text,
+  p_show_on_team boolean default null,
+  p_is_team_lead boolean default null,
+  p_team_role text default null,
+  p_team_image_url text default null,
+  p_team_sort_order integer default null
 )
 returns boolean
 language plpgsql
@@ -947,6 +955,66 @@ $$;
 grant execute on function public.get_homepage_instagram_post() to anon, authenticated;
 grant execute on function public.admin_set_homepage_instagram_post(text, text, text, text, timestamptz, text) to authenticated;
 
+-- Bannerarchiv und dauerhaft gespeichertes Darstellungsformat.
+create or replace function public.get_homepage_banner_aspect()
+returns text
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select coalesce((select value_text from public.site_settings where key = 'homepage_banner_aspect'), '16:9');
+$$;
+
+create or replace function public.admin_set_homepage_banner_aspect(p_aspect text)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin(auth.uid()) then
+    raise exception 'Nur Admins duerfen das Bannerformat aendern.';
+  end if;
+  if p_aspect is null or (p_aspect not in ('9:16', '16:9') and p_aspect !~ '^custom:[1-9][0-9]{0,3}:[1-9][0-9]{0,3}$') then
+    raise exception 'Ungueltiges Bannerformat.';
+  end if;
+  insert into public.site_settings (key, value_text, updated_at, updated_by)
+  values ('homepage_banner_aspect', p_aspect, now(), auth.uid())
+  on conflict (key) do update set value_text = excluded.value_text, updated_at = now(), updated_by = auth.uid();
+  return p_aspect;
+end;
+$$;
+
+create or replace function public.admin_list_homepage_banners()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+stable
+as $$
+declare
+  v_banners jsonb;
+begin
+  if not public.is_admin(auth.uid()) then
+    raise exception 'Nur Admins duerfen das Bannerarchiv ansehen.';
+  end if;
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'path', o.name,
+    'created_at', o.created_at
+  ) order by o.created_at desc), '[]'::jsonb)
+  into v_banners
+  from storage.objects o
+  where o.bucket_id = 'photos'
+    and o.name ~ '(^|/)banners/[^/]+$';
+  return v_banners;
+end;
+$$;
+
+grant execute on function public.get_homepage_banner_aspect() to anon, authenticated;
+grant execute on function public.admin_set_homepage_banner_aspect(text) to authenticated;
+grant execute on function public.admin_list_homepage_banners() to authenticated;
+
 -- ============================================================
 -- Team-Verwaltung fuer Dashboard + Team-Seite
 -- ============================================================
@@ -1271,7 +1339,7 @@ grant execute on function public.admin_list_users() to authenticated;
 grant execute on function public.dashboard_list_members() to authenticated;
 grant execute on function public.list_gallery_photos(boolean) to anon, authenticated;
 grant execute on function public.get_latest_gallery_photo(boolean) to anon, authenticated;
-grant execute on function public.admin_update_user(uuid, text, text) to authenticated;
+grant execute on function public.admin_update_user(uuid, text, text, boolean, boolean, text, text, integer) to authenticated;
 grant execute on function public.admin_approve_photo(bigint) to authenticated;
 grant execute on function public.admin_mark_photo_as_troll(bigint) to authenticated;
 grant execute on function public.admin_delete_photo(bigint) to authenticated;
@@ -1715,7 +1783,12 @@ from public.list_gallery_photos(false);
 create or replace function public.admin_update_user(
   p_user_id uuid,
   p_username text,
-  p_role text
+  p_role text,
+  p_show_on_team boolean default null,
+  p_is_team_lead boolean default null,
+  p_team_role text default null,
+  p_team_image_url text default null,
+  p_team_sort_order integer default null
 )
 returns boolean
 language plpgsql
@@ -1908,7 +1981,7 @@ grant execute on function public.admin_list_users() to authenticated;
 grant execute on function public.dashboard_list_members() to authenticated;
 grant execute on function public.list_gallery_photos(boolean) to anon, authenticated;
 grant execute on function public.get_latest_gallery_photo(boolean) to anon, authenticated;
-grant execute on function public.admin_update_user(uuid, text, text) to authenticated;
+grant execute on function public.admin_update_user(uuid, text, text, boolean, boolean, text, text, integer) to authenticated;
 grant execute on function public.admin_approve_photo(bigint) to authenticated;
 grant execute on function public.admin_mark_photo_as_troll(bigint) to authenticated;
 grant execute on function public.admin_delete_photo(bigint) to authenticated;
@@ -2327,7 +2400,12 @@ $$;
 create or replace function public.admin_update_user(
   p_user_id uuid,
   p_username text,
-  p_role text
+  p_role text,
+  p_show_on_team boolean default null,
+  p_is_team_lead boolean default null,
+  p_team_role text default null,
+  p_team_image_url text default null,
+  p_team_sort_order integer default null
 )
 returns boolean
 language plpgsql

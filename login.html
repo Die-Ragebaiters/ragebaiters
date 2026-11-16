@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login | die Ragebaiters</title>
   <link rel="icon" type="image/png" href="images/logo.png">
-  <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="app.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="./styles.css?v=2026-08-31-2">
+  <link rel="stylesheet" href="./app.css?v=2026-04-23-6">
 </head>
 <body>
 
@@ -16,7 +18,14 @@
 
   <header class="container">
     <nav class="nav">
-      <div style="font-weight: 900; font-size: 1.6rem;">die Ragebaiters</div>
+      <div class="nav-brand">
+        <div class="nav-title">die Ragebaiters</div>
+      </div>
+      <button class="nav-toggle" type="button" aria-label="Menü" aria-expanded="false">
+        <span class="nav-toggle-bar"></span>
+        <span class="nav-toggle-bar"></span>
+        <span class="nav-toggle-bar"></span>
+      </button>
       <div class="nav-links">
         <a href="index.html">Startseite</a>
         <a href="team.html">Team</a>
@@ -36,6 +45,7 @@
         </a>
       </div>
     </nav>
+    <div class="nav-backdrop" aria-hidden="true"></div>
   </header>
 
   <main class="container">
@@ -50,12 +60,12 @@
 
           <form id="loginForm" class="auth-form" autocomplete="on">
             <label class="field">
-              <span>E-Mail</span>
-              <input type="email" name="email" required autofocus>
+              <span>Benutzername oder E-Mail</span>
+              <input type="text" name="identifier" required autofocus autocomplete="username">
             </label>
             <label class="field">
               <span>Passwort</span>
-              <input type="password" name="password" required>
+              <input type="password" name="password" required autocomplete="current-password">
             </label>
             <button type="submit" class="btn-primary" id="submitBtn">Anmelden</button>
           </form>
@@ -73,13 +83,14 @@
     <div style="font-size: 0.8rem; opacity: 0.6;">Est. 2026 • Made by sneiper0</div>
   </footer>
 
-  <script src="config.js"></script>
+  <script src="./nav.js?v=2026-04-23-5" defer></script>
+  <script src="./config.js?v=2026-04-23-5"></script>
   <script type="module">
-    import { supabase, initPage, getSessionUser } from './auth.js';
+    import { supabase, initPage, getSessionUser, buildScopedUrl, waitForSessionUser, rememberPendingSession, resolveLoginEmail } from './auth.js?v=2026-04-23-1';
     await initPage('login');
 
     // Wenn bereits eingeloggt -> Dashboard
-    if (await getSessionUser()) location.href = 'dashboard.html';
+    if (await getSessionUser()) location.href = buildScopedUrl('dashboard.html');
 
     const form   = document.getElementById('loginForm');
     const alertE = document.getElementById('alert');
@@ -92,8 +103,19 @@
       btn.textContent = 'Anmelden …';
 
       const fd = new FormData(form);
-      const { error } = await supabase.auth.signInWithPassword({
-        email: fd.get('email').trim(),
+      const identifier = fd.get('identifier').trim();
+      const email = await resolveLoginEmail(identifier);
+
+      if (!email) {
+        alertE.textContent = 'Benutzername oder Passwort falsch.';
+        alertE.hidden = false;
+        btn.disabled = false;
+        btn.textContent = 'Anmelden';
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
         password: fd.get('password'),
       });
 
@@ -104,11 +126,23 @@
         btn.textContent = 'Anmelden';
         return;
       }
-      location.href = 'dashboard.html';
+
+      rememberPendingSession(data?.session);
+
+      const readyUser = await waitForSessionUser();
+      if (!readyUser) {
+        alertE.textContent = 'Session wurde nicht rechtzeitig geladen. Bitte noch einmal anmelden.';
+        alertE.hidden = false;
+        btn.disabled = false;
+        btn.textContent = 'Anmelden';
+        return;
+      }
+
+      location.href = buildScopedUrl('dashboard.html');
     });
 
     function mapError(msg) {
-      if (/invalid login/i.test(msg)) return 'E-Mail oder Passwort falsch.';
+      if (/invalid login/i.test(msg)) return 'Benutzername oder Passwort falsch.';
       if (/email not confirmed/i.test(msg)) return 'Bitte zuerst die Bestätigungs-Mail öffnen.';
       return msg;
     }

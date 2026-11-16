@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Impressum | die Ragebaiters</title>
   <link rel="icon" type="image/png" href="images/logo.png">
-  <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="impressum.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="./styles.css?v=2026-08-31-2">
+  <link rel="stylesheet" href="./impressum.css?v=2026-04-23-6">
 </head>
 <body>
 
@@ -16,7 +18,14 @@
 
   <header class="container">
     <nav class="nav">
-      <div style="font-weight: 900; font-size: 1.6rem;">die Ragebaiters</div>
+      <div class="nav-brand">
+        <div class="nav-title">die Ragebaiters</div>
+      </div>
+      <button class="nav-toggle" type="button" aria-label="Menü" aria-expanded="false">
+        <span class="nav-toggle-bar"></span>
+        <span class="nav-toggle-bar"></span>
+        <span class="nav-toggle-bar"></span>
+      </button>
       <div class="nav-links">
         <a href="index.html">Startseite</a>
         <a href="team.html">Team</a>
@@ -36,6 +45,7 @@
         </a>
       </div>
     </nav>
+    <div class="nav-backdrop" aria-hidden="true"></div>
   </header>
 
   <main class="container">
@@ -57,7 +67,7 @@
           </div>
           <h3 class="imp-title">Verantwortlich</h3>
           <p class="imp-text">
-            <strong>Ben Schmitz</strong><br>
+            <strong>Michael Scholz</strong><br>
             Inhaber &amp; Ansprechpartner
           </p>
         </article>
@@ -71,8 +81,8 @@
           </div>
           <h3 class="imp-title">Anschrift</h3>
           <p class="imp-text">
-            Hüttenstraße 164<br>
-            56170 Bendorf<br>
+            Höhrer Straße 11<br>
+            56179 Vallendar<br>
             Deutschland
           </p>
         </article>
@@ -142,9 +152,10 @@
     <div style="font-size: 0.8rem; opacity: 0.6;">Est. 2026 • Made by sneiper0</div>
   </footer>
 
-<script src="config.js"></script>
+<script src="./nav.js?v=2026-04-23-5" defer></script>
+<script src="./config.js?v=2026-04-23-5"></script>
 <script type="module">
-  import { initPage } from './auth.js';
+    import { initPage } from './auth.js?v=2026-04-23-1';
   initPage('impressum');
 </script>
 </body>
