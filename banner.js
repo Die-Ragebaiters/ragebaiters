@@ -35,9 +35,18 @@ async function loadSharedBanner() {
     banner.style.setProperty('--banner-aspect-ratio', ratio);
     const image = banner.querySelector('img');
     if (!image) continue;
-    image.src = imageUrl;
+    // Banner-Dateien werden beim Upload teils unter demselben Storage-Pfad
+    // überschrieben. Ein URL-Parameter verhindert, dass der Browser auf der
+    // Startseite noch eine ältere, zwischengespeicherte Version zeigt.
+    image.src = withCacheBuster(imageUrl);
     image.alt = alt;
   }
+}
+
+function withCacheBuster(url) {
+  const parsedUrl = new URL(url, document.baseURI);
+  parsedUrl.searchParams.set('rb_banner', String(Date.now()));
+  return parsedUrl.toString();
 }
 
 function resolveBannerUrl(path) {
