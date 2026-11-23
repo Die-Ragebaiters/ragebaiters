@@ -23,7 +23,6 @@ const TEST_HANDOFF_PREFIX = 'ragebaiters:test-handoff:';
 const TEST_ACCOUNT_LIFETIME_MS = 5 * 60 * 1000;
 const DEFAULT_BANNER_VARIANT = 'team';
 const BANNER_OPTIONS = {
-  sponsor: { src: 'images/banner.png', label: 'Sponsor' },
   team: { src: 'images/banner2.png', label: 'Team' }
 };
 
@@ -72,6 +71,11 @@ const customBannerInput = document.getElementById('customBannerInput');
 const uploadCustomBannerBtn = document.getElementById('uploadCustomBannerBtn');
 const customBannerChoicePreview = document.getElementById('customBannerChoicePreview');
 const customBannerUploadHint = document.getElementById('customBannerUploadHint');
+const bannerLibrarySelect = document.getElementById('bannerLibrarySelect');
+const bannerAspectSelect = document.getElementById('bannerAspectSelect');
+const bannerCustomAspect = document.getElementById('bannerCustomAspect');
+const bannerAspectWidth = document.getElementById('bannerAspectWidth');
+const bannerAspectHeight = document.getElementById('bannerAspectHeight');
 const instagramPostUrlInput = document.getElementById('instagramPostUrlInput');
 const instagramImageUrlInput = document.getElementById('instagramImageUrlInput');
 const instagramTitleInput = document.getElementById('instagramTitleInput');
@@ -104,7 +108,8 @@ const state = {
   userDirectory: [],
   teamUploadSuccessByMember: {},
   teamSavePending: false,
-  bannerCustomPath: ''
+  bannerCustomPath: '',
+  bannerAspect: '16:9'
 };
 const currentSessionScope = getCurrentSessionScope();
 const isTemporaryTestSession = currentSessionScope === TEST_ACCOUNT_SCOPE
@@ -289,6 +294,17 @@ function setupAdminActions() {
     customBannerInput.value = '';
     if (!file) return;
     await uploadCustomBanner(file);
+  });
+  bannerAspectSelect?.addEventListener('change', () => {
+    bannerCustomAspect.hidden = bannerAspectSelect.value !== 'custom';
+    applyBannerAspect(getSelectedBannerAspect());
+  });
+  [bannerAspectWidth, bannerAspectHeight].forEach(field => field?.addEventListener('input', () => {
+    if (bannerAspectSelect?.value === 'custom') applyBannerAspect(getSelectedBannerAspect());
+  }));
+  bannerLibrarySelect?.addEventListener('change', async () => {
+    const path = bannerLibrarySelect.value;
+    if (path) await activateExistingBanner(path);
   });
   saveInstagramBtn.addEventListener('click', () => saveInstagramSettings());
 
@@ -814,17 +830,23 @@ async function loadInvites() {
 async function loadBannerSetting() {
   const [
     { data: variantData, error: variantError },
-    { data: customPathData, error: customPathError }
+    { data: customPathData, error: customPathError },
+    { data: aspectData, error: aspectError }
   ] = await Promise.all([
     supabase.rpc('get_homepage_banner'),
-    supabase.rpc('get_homepage_banner_custom_path')
+    supabase.rpc('get_homepage_banner_custom_path'),
+    supabase.rpc('get_homepage_banner_aspect'),
+    loadBannerLibrary()
   ]);
 
   state.bannerCustomPath = normalizeBannerCustomPath(customPathData);
+  if (bannerLibrarySelect) bannerLibrarySelect.value = state.bannerCustomPath;
+  state.bannerAspect = normalizeBannerAspect(aspectData);
+  setBannerAspectControls(state.bannerAspect);
   syncCustomBannerChoicePreview();
 
-  if (variantError || customPathError) {
-    const errorMessage = variantError?.message || customPathError?.message || 'Unbekannter Fehler';
+  if (variantError || customPathError || aspectError) {
+    const errorMessage = variantError?.message || customPathError?.message || aspectError?.message || 'Unbekannter Fehler';
     setMessage(bannerMessage, `Banner-Einstellung konnte nicht geladen werden: ${errorMessage}`, 'error');
   } else {
     setMessage(bannerMessage, '', 'info', true);
@@ -835,6 +857,76 @@ async function loadBannerSetting() {
   if (radio) radio.checked = true;
   updateBannerPreview(variant);
   updateDashboardTopBanner(variant);
+}
+
+async function loadBannerLibrary() {
+  if (!bannerLibrarySelect) return;
+  const { data, error } = await supabase.rpc('admin_list_homepage_banners');
+  const banners = Array.isArray(data) ? data : [];
+  bannerLibrarySelect.innerHTML = '<option value="">Bannerarchiv wählen...</option>' + banners.map(entry => {
+    const path = normalizeBannerCustomPath(entry?.path);
+    const label = `${path.split('/').pop()}${entry?.created_at ? ` · ${new Date(entry.created_at).toLocaleDateString('de-DE')}` : ''}`;
+    return path ? `<option value="${escapeHtmlAttr(path)}">${escapeHtml(label)}</option>` : '';
+  }).join('');
+  if (error) {
+    bannerLibrarySelect.innerHTML = '<option value="">Archiv konnte nicht geladen werden</option>';
+    setMessage(bannerMessage, `Bannerarchiv konnte nicht geladen werden: ${error.message}`, 'error');
+  }
+}
+
+async function activateExistingBanner(path) {
+  const { error: pathError } = await supabase.rpc('admin_set_homepage_banner_custom_path', { p_storage_path: path });
+  if (pathError) {
+    setMessage(bannerMessage, `Banner konnte nicht ausgewählt werden: ${pathError.message}`, 'error');
+    return;
+  }
+  const { error: activeError } = await supabase.rpc('admin_set_homepage_banner', { p_variant: 'custom' });
+  if (activeError) {
+    setMessage(bannerMessage, `Banner konnte nicht aktiviert werden: ${activeError.message}`, 'error');
+    return;
+  }
+  state.bannerCustomPath = path;
+  syncCustomBannerChoicePreview();
+  const customRadio = bannerRadios.find(radio => radio.value === 'custom');
+  if (customRadio) customRadio.checked = true;
+  updateBannerPreview('custom');
+  updateDashboardTopBanner('custom');
+  setMessage(bannerMessage, 'Archiv-Banner ausgewählt und aktiviert.', 'success');
+}
+
+function normalizeBannerAspect(value) {
+  const aspect = String(value || '').trim();
+  if (aspect === '9:16' || aspect === '16:9') return aspect;
+  const match = aspect.match(/^custom:([1-9]\d{0,3}):([1-9]\d{0,3})$/);
+  return match ? aspect : '16:9';
+}
+
+function getSelectedBannerAspect() {
+  const mode = bannerAspectSelect?.value || '16:9';
+  if (mode !== 'custom') return mode;
+  const width = Number(bannerAspectWidth?.value);
+  const height = Number(bannerAspectHeight?.value);
+  if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1 || width > 9999 || height > 9999) return '';
+  return `custom:${width}:${height}`;
+}
+
+function setBannerAspectControls(aspect) {
+  const normalized = normalizeBannerAspect(aspect);
+  const match = normalized.match(/^custom:(\d+):(\d+)$/);
+  if (bannerAspectSelect) bannerAspectSelect.value = match ? 'custom' : normalized;
+  if (match) {
+    if (bannerAspectWidth) bannerAspectWidth.value = match[1];
+    if (bannerAspectHeight) bannerAspectHeight.value = match[2];
+  }
+  if (bannerCustomAspect) bannerCustomAspect.hidden = !match;
+  applyBannerAspect(normalized);
+}
+
+function applyBannerAspect(aspect) {
+  const match = normalizeBannerAspect(aspect).match(/^(?:custom:)?(\d+):(\d+)$/);
+  if (!match) return;
+  const ratio = `${match[1]} / ${match[2]}`;
+  document.querySelectorAll('.top-banner, #bannerPreview').forEach(element => element.style.setProperty('--banner-aspect-ratio', ratio));
 }
 
 async function saveBannerSetting() {
@@ -848,6 +940,19 @@ async function saveBannerSetting() {
   }
 
   const selected = normalizeBannerVariant(rawSelected, state.bannerCustomPath);
+
+  const aspect = getSelectedBannerAspect();
+  if (!aspect) {
+    setMessage(bannerMessage, 'Bitte ein gültiges Seitenverhältnis eingeben.', 'error');
+    return;
+  }
+
+  const { error: aspectError } = await supabase.rpc('admin_set_homepage_banner_aspect', { p_aspect: aspect });
+  if (aspectError) {
+    setMessage(bannerMessage, `Seitenverhältnis konnte nicht gespeichert werden: ${aspectError.message}`, 'error');
+    return;
+  }
+  state.bannerAspect = aspect;
 
   const { error } = await supabase.rpc('admin_set_homepage_banner', { p_variant: selected });
 
@@ -863,6 +968,7 @@ async function saveBannerSetting() {
 
 function updateDashboardTopBanner(variant) {
   if (!dashboardTopBannerImg) return;
+  applyBannerAspect(state.bannerAspect);
 
   const normalized = normalizeBannerVariant(variant, state.bannerCustomPath);
   if (normalized === 'custom' && state.bannerCustomPath) {
@@ -877,6 +983,7 @@ function updateDashboardTopBanner(variant) {
 }
 
 function updateBannerPreview(variant) {
+  applyBannerAspect(getSelectedBannerAspect() || state.bannerAspect);
   const normalized = normalizeBannerVariant(variant, state.bannerCustomPath);
 
   if (normalized === 'custom') {
@@ -914,8 +1021,6 @@ async function uploadCustomBanner(file) {
 
   const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
   const key = `${userId}/banners/homepage-${Date.now()}.${ext}`;
-  const previousPath = state.bannerCustomPath;
-
   setMessage(bannerMessage, 'Banner wird hochgeladen...', 'info');
 
   const { error: uploadError } = await supabase.storage
@@ -937,18 +1042,37 @@ async function uploadCustomBanner(file) {
     return;
   }
 
-  if (isBannerStoragePath(previousPath) && previousPath !== key) {
-    await supabase.storage.from('photos').remove([previousPath]).catch(() => {});
+  // Activate immediately after saving the path. A missing format RPC must not
+  // leave the uploaded image stored while the old banner remains active.
+  const { error: activateError } = await supabase.rpc('admin_set_homepage_banner', { p_variant: 'custom' });
+  if (activateError) {
+    setMessage(bannerMessage, `Banner ist hochgeladen, konnte aber nicht aktiviert werden: ${activateError.message}`, 'error');
+    return;
   }
 
   state.bannerCustomPath = key;
   syncCustomBannerChoicePreview();
-
   const customRadio = bannerRadios.find(radio => radio.value === 'custom');
   if (customRadio) customRadio.checked = true;
+  updateBannerPreview('custom');
+  updateDashboardTopBanner('custom');
+
+  const aspect = getSelectedBannerAspect();
+  if (!aspect) {
+    setMessage(bannerMessage, 'Banner wurde hochgeladen und aktiviert. Bitte ein gültiges Seitenverhältnis festlegen und speichern.', 'error');
+    return;
+  }
+  const { error: aspectError } = await supabase.rpc('admin_set_homepage_banner_aspect', { p_aspect: aspect });
+  if (aspectError) {
+    setMessage(bannerMessage, `Banner wurde hochgeladen und aktiviert. Seitenverhältnis konnte nicht gespeichert werden: ${aspectError.message}`, 'error');
+    return;
+  }
+  state.bannerAspect = aspect;
+  await loadBannerLibrary();
 
   updateBannerPreview('custom');
-  setMessage(bannerMessage, 'Eigenes Banner hochgeladen. Klicke jetzt auf "Banner speichern", um es live zu schalten.', 'success');
+  updateDashboardTopBanner('custom');
+  setMessage(bannerMessage, 'Eigenes Banner hochgeladen und automatisch aktiviert.', 'success');
 }
 
 async function loadInstagramSettings() {

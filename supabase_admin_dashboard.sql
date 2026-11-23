@@ -60,6 +60,10 @@ insert into public.site_settings (key, value_text)
 values ('homepage_banner_variant', 'team')
 on conflict (key) do nothing;
 
+update public.site_settings
+set value_text = 'team', updated_at = now()
+where key = 'homepage_banner_variant' and value_text = 'sponsor';
+
 alter table public.invites add column if not exists created_at timestamptz not null default now();
 alter table public.invites add column if not exists created_by uuid references auth.users (id) on delete set null;
 alter table public.invites add column if not exists used_at timestamptz;
@@ -208,7 +212,7 @@ begin
     raise exception 'Nur Admins duerfen das Startseiten-Banner aendern.';
   end if;
 
-  if p_variant not in ('sponsor', 'team', 'custom') then
+  if p_variant not in ('team', 'custom') then
     raise exception 'Ungueltige Banner-Variante: %', p_variant;
   end if;
 
@@ -441,8 +445,22 @@ security definer
 set search_path = public
 stable
 as $$
-  select *
-  from public.list_gallery_photos(p_include_internal)
+  select
+    p.id,
+    p.storage_path,
+    p.title,
+    p.caption,
+    coalesce(pr.username, 'anonym') as author,
+    p.uploaded_at
+  from public.photos p
+  left join public.profiles pr on pr.id = p.user_id
+  where p.visibility = 'public'
+     or (
+       p.visibility = 'troll_internal'
+       and p_include_internal
+       and public.current_user_role() in ('observer', 'admin')
+     )
+  order by p.uploaded_at desc nulls last, p.id desc
   limit 1;
 $$;
 
@@ -954,6 +972,66 @@ $$;
 
 grant execute on function public.get_homepage_instagram_post() to anon, authenticated;
 grant execute on function public.admin_set_homepage_instagram_post(text, text, text, text, timestamptz, text) to authenticated;
+
+-- Bannerarchiv und dauerhaft gespeichertes Darstellungsformat.
+create or replace function public.get_homepage_banner_aspect()
+returns text
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select coalesce((select value_text from public.site_settings where key = 'homepage_banner_aspect'), '16:9');
+$$;
+
+create or replace function public.admin_set_homepage_banner_aspect(p_aspect text)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin(auth.uid()) then
+    raise exception 'Nur Admins duerfen das Bannerformat aendern.';
+  end if;
+  if p_aspect is null or (p_aspect not in ('9:16', '16:9') and p_aspect !~ '^custom:[1-9][0-9]{0,3}:[1-9][0-9]{0,3}$') then
+    raise exception 'Ungueltiges Bannerformat.';
+  end if;
+  insert into public.site_settings (key, value_text, updated_at, updated_by)
+  values ('homepage_banner_aspect', p_aspect, now(), auth.uid())
+  on conflict (key) do update set value_text = excluded.value_text, updated_at = now(), updated_by = auth.uid();
+  return p_aspect;
+end;
+$$;
+
+create or replace function public.admin_list_homepage_banners()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+stable
+as $$
+declare
+  v_banners jsonb;
+begin
+  if not public.is_admin(auth.uid()) then
+    raise exception 'Nur Admins duerfen das Bannerarchiv ansehen.';
+  end if;
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'path', o.name,
+    'created_at', o.created_at
+  ) order by o.created_at desc), '[]'::jsonb)
+  into v_banners
+  from storage.objects o
+  where o.bucket_id = 'photos'
+    and o.name ~ '(^|/)banners/[^/]+$';
+  return v_banners;
+end;
+$$;
+
+grant execute on function public.get_homepage_banner_aspect() to anon, authenticated;
+grant execute on function public.admin_set_homepage_banner_aspect(text) to authenticated;
+grant execute on function public.admin_list_homepage_banners() to authenticated;
 
 -- ============================================================
 -- Team-Verwaltung fuer Dashboard + Team-Seite
@@ -1478,7 +1556,7 @@ begin
     raise exception 'Nur Admins duerfen das Startseiten-Banner aendern.';
   end if;
 
-  if p_variant not in ('sponsor', 'team', 'custom') then
+  if p_variant not in ('team', 'custom') then
     raise exception 'Ungueltige Banner-Variante: %', p_variant;
   end if;
 
@@ -1711,8 +1789,22 @@ security definer
 set search_path = public
 stable
 as $$
-  select *
-  from public.list_gallery_photos(p_include_internal)
+  select
+    p.id,
+    p.storage_path,
+    p.title,
+    p.caption,
+    coalesce(pr.username, 'anonym') as author,
+    p.uploaded_at
+  from public.photos p
+  left join public.profiles pr on pr.id = p.user_id
+  where p.visibility = 'public'
+     or (
+       p.visibility = 'troll_internal'
+       and p_include_internal
+       and public.current_user_role() in ('observer', 'admin')
+     )
+  order by p.uploaded_at desc nulls last, p.id desc
   limit 1;
 $$;
 

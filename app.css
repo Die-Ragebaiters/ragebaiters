@@ -949,6 +949,30 @@
   margin-top: 0;
 }
 
+.banner-library-field,
+.banner-aspect-settings {
+  display: grid;
+  gap: 10px;
+}
+.banner-library-field { color: var(--muted); font-size: 0.92rem; }
+.banner-library-field select,
+.banner-aspect-settings select,
+.banner-custom-aspect input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  color: var(--text);
+  background: var(--panel-strong);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.banner-aspect-settings { margin-top: 20px; padding: 22px; }
+.banner-aspect-settings > label { color: var(--muted); font-size: 0.92rem; }
+.banner-custom-aspect { display: flex; align-items: end; gap: 12px; max-width: 420px; }
+.banner-custom-aspect label { flex: 1; display: grid; gap: 6px; color: var(--muted); font-size: 0.9rem; }
+.banner-preview-image { aspect-ratio: var(--banner-aspect-ratio, 16 / 9); object-fit: cover; }
+.banner-choice img { aspect-ratio: 16 / 9; object-fit: cover; }
+
 .banner-upload-hint {
   color: var(--muted);
   font-size: 0.92rem;
@@ -1266,7 +1290,7 @@
   }
 
   .banner-settings-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
