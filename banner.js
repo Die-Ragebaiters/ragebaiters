@@ -8,16 +8,13 @@ if (banners.length) {
 }
 
 async function loadSharedBanner() {
-  const [variantResult, pathResult, aspectResult] = await Promise.all([
-    supabase.rpc('get_homepage_banner'),
+  const [pathResult, aspectResult] = await Promise.all([
     supabase.rpc('get_homepage_banner_custom_path'),
     supabase.rpc('get_homepage_banner_aspect').catch(() => ({ data: '16:9', error: null }))
   ]);
 
-  if (variantResult.error) throw variantResult.error;
   if (pathResult.error) throw pathResult.error;
 
-  const variant = String(variantResult.data || 'team').trim().toLowerCase();
   const path = String(pathResult.data || '').trim();
   const aspect = String(aspectResult.data || '16:9').trim();
   const aspectMatch = aspect.match(/^(?:custom:)?([1-9]\d{0,3}):([1-9]\d{0,3})$/);
@@ -26,7 +23,11 @@ async function loadSharedBanner() {
   let imageUrl = 'images/banner2.png';
   let alt = 'die Ragebaiters Team Banner';
 
-  if (variant === 'custom' && path) {
+  // Der gespeicherte Pfad ist die Quelle der Wahrheit für alle öffentlichen
+  // Seiten. Das Dashboard speichert ihn beim Upload direkt; ein veralteter
+  // Variant-Schalter darf deshalb nicht dazu führen, dass Seiten weiterhin
+  // das Team-Standardbild anzeigen.
+  if (path) {
     imageUrl = resolveBannerUrl(path);
     alt = 'die Ragebaiters eigenes Banner';
   }
