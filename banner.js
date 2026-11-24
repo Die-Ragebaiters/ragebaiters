@@ -10,7 +10,10 @@ if (banners.length) {
 async function loadSharedBanner() {
   const [pathResult, aspectResult] = await Promise.all([
     supabase.rpc('get_homepage_banner_custom_path'),
-    supabase.rpc('get_homepage_banner_aspect').catch(() => ({ data: '16:9', error: null }))
+    // The local Supabase wrapper exposes RPC builders as thenables, but not
+    // necessarily as Promises with `.catch()`. Handle failures around `await`
+    // so an optional aspect lookup cannot abort loading the banner itself.
+    getBannerAspect()
   ]);
 
   if (pathResult.error) throw pathResult.error;
@@ -41,6 +44,15 @@ async function loadSharedBanner() {
     // Startseite noch eine ältere, zwischengespeicherte Version zeigt.
     image.src = withCacheBuster(imageUrl);
     image.alt = alt;
+  }
+}
+
+async function getBannerAspect() {
+  try {
+    return await supabase.rpc('get_homepage_banner_aspect');
+  } catch (error) {
+    console.warn('[Ragebaiters] Banner-Seitenverhältnis konnte nicht geladen werden:', error);
+    return { data: '16:9', error: null };
   }
 }
 
