@@ -43,6 +43,29 @@
   text-transform: none;
   color: var(--muted);
 }
+.field .field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.field .image-url-converter {
+  color: var(--accent) !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0;
+  box-shadow: none;
+  display: inline;
+  padding: 0 !important;
+  font-size: 0.82rem !important;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+.field .image-url-converter:hover {
+  color: var(--text) !important;
+}
 .field input {
   width: 100%;
   padding: 12px 14px;
