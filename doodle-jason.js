@@ -39,32 +39,32 @@ const GAME_STATE_MENU = 0;
 const GAME_STATE_PLAYING = 1;
 const GAME_STATE_GAME_OVER = 2;
 const GAME_STATE_WIN = 3;
-const DEFAULT_PLAYER_SPRITE = 'images/doodle-jason-face.png';
+const DEFAULT_PLAYER_SPRITE = '';
 
 const PLAYER_BY_USER_ID = {
   '0126bc68-2349-48f9-a9e8-6fa7b052697f': { key: 'jason', label: 'Jason', sprite: 'images/jason.png' },
-  'c67579e7-6643-4a1a-920d-616f4352210c': { key: 'tobi', label: 'Tobi', sprite: 'images/doodletobi.png' },
-  'a4bb0f6e-e0f3-4741-95b8-b12d82ce17b0': { key: 'nils', label: 'Nils', sprite: 'images/doodlenils.png' },
-  '943a0797-2509-46a3-9259-834242cefb23': { key: 'michael', label: 'Micha', sprite: 'images/doodlemicha.png' },
-  'dbb35b2a-c1c0-4e54-bdc6-3ff9a8b0527a': { key: 'ben', label: 'Yotzek', sprite: 'images/doodleben.png' }
+  'c67579e7-6643-4a1a-920d-616f4352210c': { key: 'tobi', label: 'Tobi', sprite: '' },
+  'a4bb0f6e-e0f3-4741-95b8-b12d82ce17b0': { key: 'nils', label: 'Nils', sprite: 'images/nils.png' },
+  '943a0797-2509-46a3-9259-834242cefb23': { key: 'michael', label: 'Micha', sprite: 'images/michi2.png' },
+  'dbb35b2a-c1c0-4e54-bdc6-3ff9a8b0527a': { key: 'ben', label: 'Yotzek', sprite: 'images/benf.png' }
 };
 
 const PLAYER_BY_LOGIN_ID = {
   jason: { key: 'jason', label: 'Jason', sprite: 'images/jason.png' },
   sneiper0: { key: 'jason', label: 'Jason', sprite: 'images/jason.png' },
-  nils: { key: 'nils', label: 'Nils', sprite: 'images/doodlenils.png' },
-  disccave: { key: 'nils', label: 'Nils', sprite: 'images/doodlenils.png' },
-  michael: { key: 'michael', label: 'Michael', sprite: 'images/doodlemicha.png' },
-  mundmbrothers: { key: 'michael', label: 'Michael', sprite: 'images/doodlemicha.png' },
-  michi: { key: 'michael', label: 'Michael', sprite: 'images/doodlemicha.png' },
-  nathan: { key: 'nathan', label: 'Nathan', sprite: 'images/doodlenathan.png' },
-  nathangoldstein: { key: 'nathan', label: 'Nathan', sprite: 'images/doodlenathan.png' },
-  goldstein: { key: 'nathan', label: 'Nathan', sprite: 'images/doodlenathan.png' },
-  ben: { key: 'ben', label: 'Ben', sprite: 'images/doodleben.png' },
-  yotzek: { key: 'ben', label: 'Ben', sprite: 'images/doodleben.png' },
-  benluca: { key: 'benluca', label: 'Benluca', sprite: 'images/doodlebenluca.png' },
-  tobi: { key: 'tobi', label: 'Tobi', sprite: 'images/doodletobi.png' },
-  tobias: { key: 'tobi', label: 'Tobi', sprite: 'images/doodletobi.png' }
+  nils: { key: 'nils', label: 'Nils', sprite: 'images/nils.png' },
+  disccave: { key: 'nils', label: 'Nils', sprite: 'images/nils.png' },
+  michael: { key: 'michael', label: 'Michael', sprite: 'images/michi2.png' },
+  mundmbrothers: { key: 'michael', label: 'Michael', sprite: 'images/michi2.png' },
+  michi: { key: 'michael', label: 'Michael', sprite: 'images/michi2.png' },
+  nathan: { key: 'nathan', label: 'Nathan', sprite: 'images/nathan.png' },
+  nathangoldstein: { key: 'nathan', label: 'Nathan', sprite: 'images/nathan.png' },
+  goldstein: { key: 'nathan', label: 'Nathan', sprite: 'images/nathan.png' },
+  ben: { key: 'ben', label: 'Ben', sprite: 'images/benf.png' },
+  yotzek: { key: 'ben', label: 'Ben', sprite: 'images/benf.png' },
+  benluca: { key: 'benluca', label: 'Benluca', sprite: '' },
+  tobi: { key: 'tobi', label: 'Tobi', sprite: '' },
+  tobias: { key: 'tobi', label: 'Tobi', sprite: '' }
 };
 
 const GAME_CONFIGS = {
@@ -231,7 +231,7 @@ const GAME_CONFIGS = {
 const userProfile = await getProfile(user.id);
 const playerIdentity = resolvePlayerIdentity(user, userProfile);
 const playerImg = new Image();
-playerImg.src = playerIdentity.sprite;
+if (playerIdentity.sprite) playerImg.src = playerIdentity.sprite;
 
 let activeGameKey = normalizeGameKey(localStorage.getItem('ragebaiters:arcade:selected-game')) || 'doodle_jason';
 let activeGame = null;
@@ -377,7 +377,7 @@ function applyGameUi(config) {
 
   if (config.showAvatarCard) {
     if (playerAvatarPreview) {
-      playerAvatarPreview.src = playerIdentity.sprite;
+      playerAvatarPreview.src = playerIdentity.sprite || 'images/logo.png';
       playerAvatarPreview.alt = `${playerIdentity.label} Spielfigur`;
     }
     if (playerAvatarName) {
@@ -4949,7 +4949,7 @@ function resolvePlayerIdentity(currentUser, profile) {
     return {
       ...found,
       username,
-      assetLabel: found.sprite.split('/').pop() || found.sprite
+      assetLabel: found.sprite ? (found.sprite.split('/').pop() || found.sprite) : 'deine Account-Initiale'
     };
   }
 
@@ -4958,7 +4958,7 @@ function resolvePlayerIdentity(currentUser, profile) {
     label: beautifyUsername(username),
     sprite: DEFAULT_PLAYER_SPRITE,
     username,
-    assetLabel: DEFAULT_PLAYER_SPRITE.split('/').pop() || DEFAULT_PLAYER_SPRITE
+    assetLabel: DEFAULT_PLAYER_SPRITE ? (DEFAULT_PLAYER_SPRITE.split('/').pop() || DEFAULT_PLAYER_SPRITE) : 'deine Account-Initiale'
   };
 }
 
@@ -5103,11 +5103,15 @@ function createPacmanGame({ onStatus, onScore, sprite }) {
     ctx.fillStyle = '#fff'; ctx.font = 'bold 19px Arial'; ctx.textAlign = 'left'; ctx.fillText(`PUNKTE ${score}`, 15, 24);
     if (state === GAME_STATE_PLAYING || state === GAME_STATE_GAME_OVER || state === GAME_STATE_WIN) {
       ghosts.forEach(ghost => drawPacGhost(ghost.x * TILE + TILE / 2, ghost.y * TILE + TILE / 2, ghost.color, power > 0));
+      const x = player.x * TILE + TILE / 2, y = player.y * TILE + TILE / 2;
       if (sprite?.complete && sprite.naturalWidth) {
-        const x = player.x * TILE + TILE / 2, y = player.y * TILE + TILE / 2;
         ctx.save(); ctx.beginPath(); ctx.arc(x, y, 13, 0, Math.PI * 2); ctx.clip();
         ctx.drawImage(sprite, x - 13, y - 13, 26, 26); ctx.restore();
         ctx.strokeStyle = '#ffe46b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 14, 0, Math.PI * 2); ctx.stroke();
+      } else {
+        ctx.fillStyle = '#ffe46b'; ctx.beginPath(); ctx.arc(x, y, 13, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#292247'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText((playerIdentity.label || '?').charAt(0).toUpperCase(), x, y + 1);
       }
     }
     if (state === GAME_STATE_MENU) drawArcadeOverlay('PAC-MAN', 'Dein Account-Gesicht durchs Labyrinth!', 'KLICKEN ODER ENTER ZUM STARTEN', '#ffe46b', pointer);
