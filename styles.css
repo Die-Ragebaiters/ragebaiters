@@ -1232,9 +1232,11 @@ h2 { font-size: clamp(1.8rem, 8vw, 3rem); font-weight: 900; line-height: 1.2; }
   width: 100%;
   max-width: min(100%, var(--game-canvas-max-width, 400px));
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
+
+.page-doodle-jason .game-touch-btn.is-hidden { display: none; }
 
 .page-doodle-jason .game-touch-btn {
   border: 1px solid rgba(255,255,255,0.12);

@@ -181,6 +181,50 @@ const GAME_CONFIGS = {
       { title: 'Tempo', copy: 'Mit S oder Pfeil runter weich fallen lassen, mit Leertaste direkt hard droppen.' },
       { title: 'Punkte', copy: 'Linien loeschen, Level hochschrauben und den Stack moeglichst lange sauber halten.' }
     ]
+  },
+  pacman: {
+    key: 'pacman',
+    title: 'Pac-Man',
+    intro: 'Ein Labyrinth voller Punkte und Geister. Dein Account-Gesicht ist die Spielfigur.',
+    metaKicker: 'Steuerung',
+    metaTitle: 'Punkte sammeln',
+    scoreboardTitle: 'Pac-Man Highscores',
+    canvasWidth: 630,
+    canvasHeight: 630,
+    displayWidth: 760,
+    canvasLabel: 'Pac-Man Labyrinth',
+    showAvatarCard: true,
+    touchActions: ['left', 'up', 'down', 'right'],
+    touchLabels: { left: '←', up: '↑', down: '↓', right: '→' },
+    avatarTitle: identity => `${identity.label} ist Pac-Man`,
+    avatarHint: identity => `Im Labyrinth laeuft ${identity.assetLabel} als Spielfigur herum.`,
+    rules: [
+      { title: 'Steuern', copy: 'Mit Pfeiltasten oder den Richtungstasten durchs Labyrinth laufen.' },
+      { title: 'Sammeln', copy: 'Punkte bringen Score. Grosse Power-Punkte machen Geister kurz verwundbar.' },
+      { title: 'Ausweichen', copy: 'Beruehrt dich ein Geist, ist die Runde vorbei. Raeume das Labyrinth fuer einen Bonus.' },
+      { title: 'Mobil', copy: 'Auf dem Handy die eingeblendeten Richtungstasten verwenden.' }
+    ]
+  },
+  missile_command: {
+    key: 'missile_command',
+    title: 'Raketenabwehr',
+    intro: 'Greife eine fiktive Pixelwelt an und wehre ihre Gegenangriffe ab. Das Szenario ist reine Arcade-Fiktion.',
+    metaKicker: 'Steuerung',
+    metaTitle: 'Angriff und Verteidigung',
+    scoreboardTitle: 'Raketenabwehr Highscores',
+    canvasWidth: 800,
+    canvasHeight: 600,
+    displayWidth: 1080,
+    canvasLabel: 'Fiktives Raketenabwehr Arcade-Spiel',
+    showAvatarCard: false,
+    touchActions: ['attack', 'fire'],
+    touchLabels: { attack: 'Angreifen', fire: 'Abfangen' },
+    rules: [
+      { title: 'Angreifen', copy: 'Klicke auf ein Ziel der fiktiven Pixelwelt oder nutze Angreifen. Deine Arcade-Raketen zerstoeren keine echte Welt.' },
+      { title: 'Abfangen', copy: 'Mit Maus/Finger zielen und Leertaste oder Abfangen druecken, um Gegenangriffe abzufangen.' },
+      { title: 'Verteidigen', copy: 'Halte deine sechs Pixel-Staedte am Leben. Munition wird zwischen Wellen aufgefuellt.' },
+      { title: 'Wellen', copy: 'Je laenger du durchhaeltst, desto schneller werden die fiktiven Gegenangriffe.' }
+    ]
   }
 };
 
@@ -293,6 +337,17 @@ async function selectGame(gameKey) {
       onStatus: setStatus,
       onScore: points => submitArcadeScore(normalized, points)
     });
+  } else if (normalized === 'pacman') {
+    activeGame = createPacmanGame({
+      onStatus: setStatus,
+      onScore: points => submitArcadeScore(normalized, points),
+      sprite: playerImg
+    });
+  } else if (normalized === 'missile_command') {
+    activeGame = createMissileDefenseGame({
+      onStatus: setStatus,
+      onScore: points => submitArcadeScore(normalized, points)
+    });
   } else {
     activeGame = createDoodleGame({
       onStatus: setStatus,
@@ -369,6 +424,8 @@ function configureCanvas(width, height, label, displayWidth = width) {
 
 function configureTouchButtons(visibleActions, labels = {}) {
   const allowed = new Set(visibleActions || []);
+  const controls = document.querySelector('.game-touch-controls');
+  if (controls) controls.style.gridTemplateColumns = `repeat(${Math.max(1, Math.min(4, allowed.size))}, minmax(0, 1fr))`;
   touchButtons.forEach(button => {
     button.classList.toggle('is-hidden', !allowed.has(button.dataset.touch));
     if (!button.dataset.defaultLabel) button.dataset.defaultLabel = button.textContent;
@@ -4923,6 +4980,317 @@ function normalizeLookupKey(value) {
 
 function normalizeUserId(value) {
   return String(value || '').trim().toLowerCase();
+}
+
+function createPacmanGame({ onStatus, onScore, sprite }) {
+  const SIZE = 21;
+  const TILE = 30;
+  const WIDTH = SIZE * TILE;
+  const HEIGHT = SIZE * TILE;
+  const walls = Array.from({ length: SIZE }, (_, y) => Array.from({ length: SIZE }, (_, x) => (
+    x === 0 || y === 0 || x === SIZE - 1 || y === SIZE - 1
+  )));
+  const blocks = [
+    [2, 2, 4, 1], [8, 2, 1, 4], [14, 2, 5, 1], [3, 5, 1, 4], [5, 5, 4, 1],
+    [12, 5, 1, 4], [15, 5, 4, 1], [2, 11, 5, 1], [8, 10, 1, 5], [14, 11, 5, 1],
+    [3, 14, 1, 4], [5, 15, 4, 1], [12, 14, 1, 4], [15, 15, 4, 1], [8, 18, 5, 1]
+  ];
+  blocks.forEach(([x, y, w, h]) => {
+    for (let yy = y; yy < y + h; yy += 1) for (let xx = x; xx < x + w; xx += 1) walls[yy][xx] = true;
+  });
+
+  let state = GAME_STATE_MENU;
+  let grid = [];
+  let player = { x: 10, y: 17 };
+  let direction = { x: 0, y: 0 };
+  let nextDirection = { x: 0, y: 0 };
+  let ghosts = [];
+  let score = 0;
+  let dotsLeft = 0;
+  let power = 0;
+  let frame = 0;
+  let pointer = { x: WIDTH / 2, y: HEIGHT / 2 };
+
+  function reset() {
+    grid = Array.from({ length: SIZE }, (_, y) => Array.from({ length: SIZE }, (_, x) => walls[y][x] ? 0 : 1));
+    grid[17][10] = 0;
+    grid[9][9] = 0; grid[9][10] = 0; grid[9][11] = 0; grid[10][10] = 0;
+    grid[3][3] = 2; grid[3][17] = 2; grid[17][2] = 2; grid[17][17] = 2;
+    dotsLeft = grid.flat().filter(value => value > 0).length;
+    score = 0; power = 0; frame = 0;
+    player = { x: 10, y: 17 };
+    direction = { x: 0, y: 0 }; nextDirection = { x: 0, y: 0 };
+    ghosts = [
+      { x: 9, y: 9, color: '#ff5470', wait: 0 },
+      { x: 11, y: 9, color: '#50e6ff', wait: 9 },
+      { x: 10, y: 10, color: '#ff9d50', wait: 18 },
+      { x: 9, y: 10, color: '#d58aff', wait: 27 }
+    ];
+  }
+
+  function open(x, y) { return x >= 0 && y >= 0 && x < SIZE && y < SIZE && !walls[y][x]; }
+  function moveEntity(entity, dir) {
+    if (open(entity.x + dir.x, entity.y + dir.y)) { entity.x += dir.x; entity.y += dir.y; return true; }
+    return false;
+  }
+  function finish() {
+    if (state !== GAME_STATE_PLAYING) return;
+    state = GAME_STATE_GAME_OVER;
+    onStatus(`Pac-Man beendet. Punkte: ${score}.`);
+    onScore(score);
+  }
+  function setDirection(x, y) { if (state === GAME_STATE_MENU) start(); nextDirection = { x, y }; }
+  function start() { reset(); state = GAME_STATE_PLAYING; onStatus('Sammle die Punkte und weiche den Geistern aus.'); }
+  function handleKeyDown(event) {
+    const dirs = { ArrowLeft: [-1, 0], a: [-1, 0], ArrowRight: [1, 0], d: [1, 0], ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1] };
+    if (dirs[event.key]) { event.preventDefault(); setDirection(...dirs[event.key]); }
+    else if (state === GAME_STATE_MENU && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); start(); }
+    else if (state !== GAME_STATE_PLAYING && event.key.toLowerCase() === 'r') start();
+  }
+  function handleTouchAction(action, pressed) {
+    if (!pressed) return;
+    const dirs = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] };
+    if (dirs[action]) setDirection(...dirs[action]);
+  }
+  function handlePointerDown(point) {
+    pointer = point;
+    if (state === GAME_STATE_MENU) start();
+    else if (state !== GAME_STATE_PLAYING) start();
+  }
+  function handlePointerMove(point) { pointer = point; }
+  function tick() {
+    frame += 1;
+    if (state !== GAME_STATE_PLAYING) return;
+    if (frame % 7 === 0) {
+      if (moveEntity(player, nextDirection)) direction = nextDirection;
+      else moveEntity(player, direction);
+      const cell = grid[player.y][player.x];
+      if (cell === 1) { score += 10; grid[player.y][player.x] = 0; dotsLeft -= 1; }
+      if (cell === 2) { score += 50; grid[player.y][player.x] = 0; dotsLeft -= 1; power = 330; }
+      if (!dotsLeft) { score += 500; state = GAME_STATE_WIN; onStatus(`Labyrinth geschafft! ${score} Punkte.`); onScore(score); }
+    }
+    if (power > 0) power -= 1;
+    ghosts.forEach(ghost => {
+      if (ghost.wait > 0) { ghost.wait -= 1; return; }
+      if (frame % 9 !== 0) return;
+      const choices = [{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }]
+        .filter(dir => open(ghost.x + dir.x, ghost.y + dir.y));
+      if (!choices.length) return;
+      if (power > 0) {
+        choices.sort((a, b) => Math.abs(ghost.x + b.x - player.x) + Math.abs(ghost.y + b.y - player.y) - Math.abs(ghost.x + a.x - player.x) - Math.abs(ghost.y + a.y - player.y));
+      } else {
+        choices.sort((a, b) => Math.abs(ghost.x + a.x - player.x) + Math.abs(ghost.y + a.y - player.y) - Math.abs(ghost.x + b.x - player.x) - Math.abs(ghost.y + b.y - player.y));
+        if (Math.random() < 0.35) choices.reverse();
+      }
+      moveEntity(ghost, choices[0]);
+      if (ghost.x === player.x && ghost.y === player.y) {
+        if (power > 0) { ghost.x = 10; ghost.y = 9; ghost.wait = 30; score += 200; }
+        else finish();
+      }
+    });
+  }
+  function render() {
+    ctx.fillStyle = '#050914'; ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.fillStyle = '#163cbd';
+    for (let y = 0; y < SIZE; y += 1) for (let x = 0; x < SIZE; x += 1) if (walls[y][x]) {
+      ctx.fillRect(x * TILE + 2, y * TILE + 2, TILE - 4, TILE - 4);
+      ctx.strokeStyle = '#397cff'; ctx.lineWidth = 2; ctx.strokeRect(x * TILE + 4, y * TILE + 4, TILE - 8, TILE - 8);
+    }
+    if (grid.length) for (let y = 0; y < SIZE; y += 1) for (let x = 0; x < SIZE; x += 1) {
+      if (grid[y][x] === 1) { ctx.fillStyle = '#ffe9a8'; ctx.beginPath(); ctx.arc(x * TILE + TILE / 2, y * TILE + TILE / 2, 3, 0, Math.PI * 2); ctx.fill(); }
+      if (grid[y][x] === 2) { ctx.fillStyle = '#fff0a5'; ctx.beginPath(); ctx.arc(x * TILE + TILE / 2, y * TILE + TILE / 2, 8 + Math.sin(frame / 5) * 2, 0, Math.PI * 2); ctx.fill(); }
+    }
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 19px Arial'; ctx.textAlign = 'left'; ctx.fillText(`PUNKTE ${score}`, 15, 24);
+    if (state === GAME_STATE_PLAYING || state === GAME_STATE_GAME_OVER || state === GAME_STATE_WIN) {
+      ghosts.forEach(ghost => drawPacGhost(ghost.x * TILE + TILE / 2, ghost.y * TILE + TILE / 2, ghost.color, power > 0));
+      if (sprite?.complete && sprite.naturalWidth) {
+        const x = player.x * TILE + TILE / 2, y = player.y * TILE + TILE / 2;
+        ctx.save(); ctx.beginPath(); ctx.arc(x, y, 13, 0, Math.PI * 2); ctx.clip();
+        ctx.drawImage(sprite, x - 13, y - 13, 26, 26); ctx.restore();
+        ctx.strokeStyle = '#ffe46b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 14, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+    if (state === GAME_STATE_MENU) drawArcadeOverlay('PAC-MAN', 'Dein Account-Gesicht durchs Labyrinth!', 'KLICKEN ODER ENTER ZUM STARTEN', '#ffe46b', pointer);
+    if (state === GAME_STATE_GAME_OVER) drawArcadeOverlay('GAME OVER', `Punkte: ${score}  ·  R zum Neustart`, 'KLICKEN ZUM NOCHMAL SPIELEN', '#ff637b', pointer);
+    if (state === GAME_STATE_WIN) drawArcadeOverlay('LABYRINTH GESCHAFFT!', `Punkte: ${score}`, 'KLICKEN ZUM NOCHMAL SPIELEN', '#6bffb3', pointer);
+  }
+  reset();
+  return { tick, render, handleKeyDown, handleTouchAction, handlePointerDown, handlePointerMove, onActivate: () => onStatus('Pfeiltasten oder Richtungstasten verwenden.') };
+}
+
+function drawPacGhost(x, y, color, frightened) {
+  ctx.fillStyle = frightened ? '#5279ff' : color;
+  ctx.beginPath(); ctx.arc(x, y - 2, 11, Math.PI, 0); ctx.lineTo(x + 11, y + 10);
+  ctx.lineTo(x + 5, y + 6); ctx.lineTo(x, y + 10); ctx.lineTo(x - 5, y + 6); ctx.lineTo(x - 11, y + 10); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(x - 4, y - 1, 3, 4, 0, 0, Math.PI * 2); ctx.ellipse(x + 4, y - 1, 3, 4, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#172246'; ctx.beginPath(); ctx.arc(x - 4, y, 1.5, 0, Math.PI * 2); ctx.arc(x + 4, y, 1.5, 0, Math.PI * 2); ctx.fill();
+}
+
+function createMissileDefenseGame({ onStatus, onScore }) {
+  const WIDTH = 800, HEIGHT = 600;
+  const baseXs = [105, 400, 695];
+  const cityXs = [55, 170, 285, 515, 630, 745];
+  let state = GAME_STATE_MENU, frame = 0, score = 0, wave = 1, spawnTimer = 0, waveDelay = 0;
+  let cities = [], ammo = [], attackAmmo = 9, incoming = [], interceptors = [], attackRockets = [], blasts = [], enemySites = [];
+  let pointer = { x: 400, y: 260 };
+
+  function reset() {
+    state = GAME_STATE_PLAYING; frame = 0; score = 0; wave = 1; spawnTimer = 25; waveDelay = 0;
+    cities = cityXs.map(x => ({ x, alive: true })); ammo = [10, 12, 10]; attackAmmo = 9; incoming = []; interceptors = []; attackRockets = []; blasts = [];
+    enemySites = [145, 400, 655].map((x, index) => ({ x, y: 118 + (index % 2) * 18, health: 3 }));
+    pointer = { x: WIDTH / 2, y: HEIGHT * 0.42 };
+    onStatus('Welle 1: Verteidige die fiktive Pixelwelt.');
+  }
+  function endGame() {
+    if (state !== GAME_STATE_PLAYING) return;
+    state = GAME_STATE_GAME_OVER;
+    onStatus(`Verteidigung beendet. ${score} Punkte erreicht.`);
+    onScore(score);
+  }
+  function start() { reset(); }
+  function fire() {
+    if (state !== GAME_STATE_PLAYING) { start(); return; }
+    if (pointer.y > HEIGHT - 90) pointer.y = HEIGHT - 110;
+    const available = ammo.map((count, index) => ({ count, index, distance: Math.abs(baseXs[index] - pointer.x) })).filter(base => base.count > 0).sort((a, b) => a.distance - b.distance)[0];
+    if (!available) { onStatus('Keine Abwehrmunition mehr. Halte bis zur naechsten Welle durch.'); return; }
+    ammo[available.index] -= 1;
+    const sx = baseXs[available.index], sy = HEIGHT - 48;
+    interceptors.push({ x: sx, y: sy, tx: pointer.x, ty: pointer.y, speed: 10 });
+  }
+  function launchAttack() {
+    if (state !== GAME_STATE_PLAYING) { start(); return; }
+    if (attackAmmo <= 0) { onStatus('Keine Arcade-Angriffe mehr uebrig.'); return; }
+    const target = enemySites.filter(site => site.health > 0).sort((a, b) => Math.abs(a.x - pointer.x) - Math.abs(b.x - pointer.x))[0];
+    if (!target) { onStatus('Alle Ziele der fiktiven Pixelwelt sind bereits ausgeschaltet.'); return; }
+    const source = cities.filter(city => city.alive).sort((a, b) => Math.abs(a.x - target.x) - Math.abs(b.x - target.x))[0];
+    if (!source) return;
+    attackAmmo -= 1;
+    attackRockets.push({ x: source.x, y: HEIGHT - 62, target, speed: 7.5 });
+    onStatus('Arcade-Rakete unterwegs zum fiktiven Ziel.');
+  }
+  function handleKeyDown(event) {
+    if ((event.key === ' ' || event.key === 'Enter') && state !== GAME_STATE_PLAYING) { event.preventDefault(); start(); }
+    else if (event.key === ' ' && state === GAME_STATE_PLAYING) { event.preventDefault(); fire(); }
+    else if (event.key.toLowerCase() === 'r' && state !== GAME_STATE_PLAYING) start();
+  }
+  function handlePointerMove(point) { pointer = point; }
+  function handlePointerDown(point) { pointer = point; if (state !== GAME_STATE_PLAYING) start(); else launchAttack(); }
+  function handleTouchAction(action, pressed) {
+    if (!pressed) return;
+    if (action === 'fire') fire();
+    if (action === 'attack') launchAttack();
+  }
+  function tick() {
+    frame += 1;
+    if (state !== GAME_STATE_PLAYING) return;
+    if (waveDelay > 0) {
+      waveDelay -= 1;
+      if (!waveDelay) { wave += 1; ammo = ammo.map(value => Math.min(12, value + 5)); attackAmmo = Math.min(12, attackAmmo + 3); spawnTimer = 40; onStatus(`Welle ${wave}: Neue Angriffswelle!`); }
+      return;
+    }
+    spawnTimer -= 1;
+    if (spawnTimer <= 0 && incoming.length < 4 + Math.min(wave, 4)) {
+      const living = cities.filter(city => city.alive);
+      if (!living.length) { endGame(); return; }
+      const target = living[Math.floor(Math.random() * living.length)];
+      const launchX = 60 + Math.random() * (WIDTH - 120);
+      incoming.push({ x: launchX, y: -8, target, speed: 0.8 + wave * 0.12 + Math.random() * 0.3, wobble: Math.random() * Math.PI * 2 });
+      spawnTimer = Math.max(20, 86 - wave * 5) + Math.random() * 24;
+    }
+    incoming.forEach(missile => {
+      missile.wobble += 0.015;
+      missile.x += (missile.target.x - missile.x) * 0.0015 + Math.sin(missile.wobble) * 0.18;
+      missile.y += missile.speed;
+      if (missile.y >= HEIGHT - 62) {
+        missile.target.alive = false;
+        missile.y = HEIGHT + 100;
+        blasts.push({ x: missile.target.x, y: HEIGHT - 58, radius: 4, maxRadius: 38, shrinking: false, life: 0 });
+      }
+    });
+    incoming = incoming.filter(missile => missile.y < HEIGHT + 20);
+    interceptors.forEach(rocket => {
+      const dx = rocket.tx - rocket.x, dy = rocket.ty - rocket.y, dist = Math.hypot(dx, dy);
+      if (dist <= rocket.speed) { blasts.push({ x: rocket.tx, y: rocket.ty, radius: 3, maxRadius: 54, shrinking: false, life: 0 }); rocket.done = true; }
+      else { rocket.x += dx / dist * rocket.speed; rocket.y += dy / dist * rocket.speed; }
+    });
+    interceptors = interceptors.filter(rocket => !rocket.done);
+    attackRockets.forEach(rocket => {
+      const dx = rocket.target.x - rocket.x, dy = rocket.target.y - rocket.y, dist = Math.hypot(dx, dy);
+      if (dist <= rocket.speed) {
+        blasts.push({ x: rocket.target.x, y: rocket.target.y, radius: 3, maxRadius: 34, shrinking: false, life: 0, attack: true });
+        rocket.target.health = Math.max(0, rocket.target.health - 1);
+        if (!rocket.target.health) score += 250;
+        rocket.done = true;
+      } else { rocket.x += dx / dist * rocket.speed; rocket.y += dy / dist * rocket.speed; }
+    });
+    attackRockets = attackRockets.filter(rocket => !rocket.done);
+    blasts.forEach(blast => {
+      blast.life += 1;
+      if (!blast.shrinking) { blast.radius += 1.9; if (blast.radius >= blast.maxRadius) blast.shrinking = true; }
+      else blast.radius -= 0.65;
+      incoming.forEach(missile => {
+        if (!missile.done && Math.hypot(missile.x - blast.x, missile.y - blast.y) < blast.radius) {
+          missile.done = true; score += 100 + wave * 10;
+        }
+      });
+    });
+    incoming = incoming.filter(missile => !missile.done);
+    blasts = blasts.filter(blast => blast.radius > 0);
+    if (!cities.some(city => city.alive)) { endGame(); return; }
+    if (!incoming.length && spawnTimer < 30 && frame % 45 === 0) {
+      waveDelay = 120;
+      onStatus(`Welle ${wave} abgewehrt. Naechste Welle startet gleich.`);
+    }
+  }
+  function render() {
+    const sky = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+    sky.addColorStop(0, '#09142c'); sky.addColorStop(1, '#211d42');
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    for (let i = 0; i < 50; i += 1) { const x = (i * 137) % WIDTH, y = (i * 71) % 380; ctx.fillStyle = i % 4 ? '#8798c8' : '#fff3b0'; ctx.fillRect(x, y, 2, 2); }
+    ctx.fillStyle = 'rgba(118, 92, 210, .16)'; ctx.beginPath(); ctx.arc(650, 120, 76, 0, Math.PI * 2); ctx.fill();
+    enemySites.forEach(site => {
+      if (site.health <= 0) return;
+      ctx.fillStyle = '#764c79'; ctx.fillRect(site.x - 30, site.y + 14, 60, 58);
+      ctx.fillStyle = '#ee86a8'; ctx.fillRect(site.x - 20, site.y, 14, 86); ctx.fillRect(site.x + 6, site.y - 12, 15, 98);
+      ctx.fillStyle = '#ffbad0';
+      for (let yy = site.y + 22; yy < site.y + 65; yy += 13) { ctx.fillRect(site.x - 17, yy, 4, 5); ctx.fillRect(site.x + 9, yy, 4, 5); }
+      ctx.fillStyle = '#fff'; ctx.font = '11px Arial'; ctx.textAlign = 'center'; ctx.fillText(`HP ${site.health}`, site.x, site.y + 89);
+    });
+    ctx.fillStyle = '#9e6cff'; ctx.font = 'bold 18px Arial'; ctx.textAlign = 'left'; ctx.fillText(`WELLE ${wave}   PUNKTE ${score}`, 18, 29);
+    ctx.textAlign = 'right'; ctx.fillStyle = '#ffe790'; ctx.fillText(`ABWEHR ${ammo.reduce((a, b) => a + b, 0)}   ·   ANGRIFF ${attackAmmo}`, WIDTH - 18, 29);
+    cities.forEach((city, index) => {
+      if (!city.alive) return;
+      const h = 17 + (index % 3) * 8;
+      ctx.fillStyle = ['#71d9ff', '#a58bff', '#ffcc73'][index % 3];
+      ctx.fillRect(city.x - 15, HEIGHT - 59 - h, 30, h);
+      for (let yy = HEIGHT - 55 - h; yy < HEIGHT - 61; yy += 9) for (let xx = city.x - 10; xx < city.x + 12; xx += 9) { ctx.fillStyle = '#fff2a8'; ctx.fillRect(xx, yy, 3, 4); }
+    });
+    baseXs.forEach((x, index) => {
+      ctx.fillStyle = '#8bffd2'; ctx.beginPath(); ctx.moveTo(x - 25, HEIGHT - 42); ctx.lineTo(x, HEIGHT - 72); ctx.lineTo(x + 25, HEIGHT - 42); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#eafff4'; ctx.font = '12px Arial'; ctx.textAlign = 'center'; ctx.fillText(String(ammo[index]), x, HEIGHT - 24);
+    });
+    incoming.forEach(missile => {
+      ctx.strokeStyle = '#ff7188'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(missile.x, missile.y - 15); ctx.lineTo(missile.x, missile.y); ctx.stroke();
+      ctx.fillStyle = '#fff0a0'; ctx.beginPath(); ctx.arc(missile.x, missile.y, 3, 0, Math.PI * 2); ctx.fill();
+    });
+    interceptors.forEach(rocket => { ctx.strokeStyle = '#82ffe1'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(rocket.x, rocket.y + 10); ctx.lineTo(rocket.x, rocket.y); ctx.stroke(); });
+    attackRockets.forEach(rocket => { ctx.strokeStyle = '#ff86bb'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(rocket.x, rocket.y + 10); ctx.lineTo(rocket.x, rocket.y); ctx.stroke(); });
+    blasts.forEach(blast => { const tint = blast.attack ? '255,112,185' : '118,255,220'; ctx.fillStyle = `rgba(${tint},${Math.max(0.1, 0.55 - blast.life / 90)})`; ctx.beginPath(); ctx.arc(blast.x, blast.y, blast.radius, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 2; ctx.stroke(); });
+    if (state === GAME_STATE_MENU) drawArcadeOverlay('PIXEL-RAKETENARCADE', 'Fiktive Welt angreifen und deine Staedte verteidigen!', 'KLICKEN ODER ENTER ZUM STARTEN', '#83ffe0', pointer);
+    if (state === GAME_STATE_GAME_OVER) drawArcadeOverlay('WELT VERLOREN', `Punkte: ${score}  ·  Welle ${wave}  ·  R zum Neustart`, 'KLICKEN ZUM NOCHMAL SPIELEN', '#ff7188', pointer);
+  }
+  return { tick, render, handleKeyDown, handlePointerDown, handlePointerMove, handleTouchAction, onActivate: () => onStatus('Maus/Finger zum Zielen, klicken oder Abfangen druecken.') };
+}
+
+function drawArcadeOverlay(title, subtitle, prompt, color, pointer) {
+  const width = Math.min(580, canvas.width - 40), x = (canvas.width - width) / 2, y = canvas.height / 2 - 95, centerX = canvas.width / 2;
+  ctx.fillStyle = 'rgba(3, 6, 18, .76)'; ctx.fillRect(x, y, width, 190);
+  ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.strokeRect(x, y, width, 190);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = color; ctx.font = '900 30px Arial'; ctx.fillText(title, centerX, y + 47, width - 24);
+  ctx.fillStyle = '#fff'; ctx.font = '17px Arial'; ctx.fillText(subtitle, centerX, y + 95, width - 24);
+  ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.font = 'bold 13px Arial'; ctx.fillText(prompt, centerX, y + 140, width - 24);
+  if (pointer) { ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(pointer.x, pointer.y, 5, 0, Math.PI * 2); ctx.stroke(); }
 }
 
 function normalizeGameKey(value) {
